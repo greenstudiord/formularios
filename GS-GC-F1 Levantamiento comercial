@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS-GC-F1 · Levantamiento Comercial</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/docx@8/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2/dist/FileSaver.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/dist/msal-browser.min.js"></script>
+<style>
+  :root {
+    --ink:#1c2b1f;--ink-mid:#3d5442;--ink-soft:#6b8870;
+    --leaf:#4a7c59;--leaf-pale:#e6f0e9;--leaf-mist:#f2f7f3;
+    --gold:#b8933a;--gold-pale:#fdf6e8;--border:#c9d9cc;
+    --white:#ffffff;--danger:#c0392b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--leaf-mist);color:var(--ink);font-size:14px;line-height:1.6;}
+  .page{max-width:880px;margin:0 auto;background:var(--white);}
+
+  /* LOGIN */
+  #login-overlay{display:none;min-height:100vh;background:var(--leaf-mist);align-items:center;justify-content:center;padding:24px;}
+  #login-overlay.vis{display:flex;}
+  .login-card{background:var(--white);border-radius:16px;border:1px solid var(--border);padding:52px 48px;max-width:420px;width:100%;text-align:center;}
+  .login-logo{font-family:'Fraunces',serif;font-weight:300;font-size:26px;color:var(--ink);margin-bottom:4px;}
+  .login-logo em{font-style:italic;color:var(--leaf);}
+  .login-sub{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:36px;font-weight:300;}
+  .login-form-name{font-size:13px;color:var(--ink-soft);background:var(--leaf-mist);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:28px;font-weight:500;}
+  .btn-ms{width:100%;padding:13px 20px;background:#0078D4;color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .2s;}
+  .btn-ms:hover{background:#005fa3;}.btn-ms:disabled{background:#9ab8d4;cursor:not-allowed;}
+  .btn-ms svg{width:20px;height:20px;flex-shrink:0;}
+  .login-note{margin-top:20px;font-size:11px;color:var(--ink-soft);line-height:1.6;}
+  .login-error{margin-top:16px;padding:10px 14px;background:#fdf0ef;border-left:3px solid var(--danger);border-radius:0 6px 6px 0;font-size:12px;color:var(--danger);text-align:left;display:none;}
+
+  /* HEADER */
+  .header{background:var(--ink);padding:36px 52px 30px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;width:320px;height:320px;border-radius:50%;border:40px solid var(--ink-mid);right:-80px;top:-120px;opacity:.5;}
+  .brand{position:relative;z-index:1;}
+  .brand h1{font-family:'Fraunces',serif;font-weight:300;font-size:28px;color:var(--white);letter-spacing:-.5px;line-height:1.1;}
+  .brand h1 em{font-style:italic;color:#8fc49a;}
+  .brand p{font-size:10px;font-weight:300;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.7);margin-top:5px;}
+  .form-meta{position:relative;z-index:1;text-align:right;}
+  .form-meta .code{font-family:'Fraunces',serif;font-weight:300;font-size:13px;color:var(--white);letter-spacing:1px;}
+  .form-meta .ver{font-size:10px;color:rgba(255,255,255,.6);margin-top:3px;}
+
+  /* USER BAR */
+  #user-bar{display:none;background:var(--leaf-pale);border-bottom:1px solid var(--border);padding:10px 52px;justify-content:space-between;align-items:center;}
+  #user-bar.vis{display:flex;}
+  .user-info{display:flex;align-items:center;gap:10px;}
+  .user-avatar{width:32px;height:32px;background:var(--leaf);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:white;flex-shrink:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--ink);}
+  .user-email{font-size:11px;color:var(--ink-soft);}
+  .user-badge{font-size:10px;padding:3px 10px;background:var(--leaf);color:white;border-radius:20px;font-weight:500;}
+
+  /* DEMO BADGE */
+  #demo-badge{background:#fff8e6;border-bottom:1px solid #f0c040;padding:9px 52px;font-size:11px;color:#7a5e1a;display:flex;align-items:center;gap:8px;}
+  #demo-badge.hidden{display:none;}
+  .demo-dot{width:8px;height:8px;border-radius:50%;background:#e6a817;flex-shrink:0;}
+
+  /* TOP BAR — solo 2 campos */
+  .top-bar{background:var(--leaf-pale);border-bottom:1px solid var(--border);padding:14px 52px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .top-bar .tf label{display:block;font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
+  .top-bar .tf input{width:100%;border:none;border-bottom:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);padding:3px 0;outline:none;}
+  .top-bar .tf input:focus{border-bottom-color:var(--leaf);}
+  .top-bar .tf input[readonly]{color:var(--ink-soft);cursor:default;}
+
+  /* PROGRESS */
+  .progress-bar{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;}
+  .step{flex:1;min-width:100px;padding:10px 8px;text-align:center;font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid transparent;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .step.active{color:var(--leaf);border-bottom-color:var(--leaf);background:var(--leaf-mist);}
+  .step.done{color:var(--ink-soft);border-bottom-color:var(--border);}
+  .step.done::before{content:'✓ ';color:var(--leaf);}
+
+  /* BODY */
+  .form-body{padding:44px 52px 60px;}
+  .section{display:none;animation:fadeIn .25s ease;}
+  .section.visible{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .section-title{font-family:'Fraunces',serif;font-weight:300;font-size:22px;color:var(--ink);margin-bottom:4px;letter-spacing:-.3px;}
+  .section-desc{font-size:12px;color:var(--ink-soft);margin-bottom:28px;font-weight:300;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px 32px;}
+  .span2{grid-column:span 2;}
+  .f{display:flex;flex-direction:column;gap:6px;}
+  .f label{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);}
+  .f label .req{color:var(--danger);}
+  .f input,.f select,.f textarea{border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s,box-shadow .2s;resize:vertical;}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(74,124,89,.1);}
+  .f input[readonly]{background:var(--leaf-mist);color:var(--ink-soft);cursor:default;}
+  .f textarea{min-height:80px;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;}
+  .chip{padding:7px 14px;border-radius:20px;border:1.5px solid var(--border);font-size:12px;color:var(--ink-soft);cursor:pointer;transition:all .15s;user-select:none;}
+  .chip:hover{border-color:var(--leaf);color:var(--leaf);}
+  .chip.sel{background:var(--leaf);border-color:var(--leaf);color:var(--white);font-weight:500;}
+
+  .check-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;}
+  .check-cards.col2{grid-template-columns:repeat(2,1fr);}
+  .check-cards.col4{grid-template-columns:repeat(4,1fr);}
+  .cc{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;user-select:none;display:flex;align-items:center;gap:8px;}
+  .cc:hover{border-color:var(--leaf);background:var(--leaf-mist);}
+  .cc input{display:none;}
+  .cc-box{width:16px;height:16px;border:1.5px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .cc input:checked~.cc-box{background:var(--leaf);border-color:var(--leaf);}
+  .cc input:checked~.cc-box::after{content:'';width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);display:block;}
+  .cc input:checked~.cc-text{color:var(--ink);font-weight:500;}
+  .cc-text{font-size:12px;color:var(--ink-soft);line-height:1.3;}
+  .cc.sel-card{border-color:var(--leaf);background:var(--leaf-pale);}
+
+  .nota{background:var(--gold-pale);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:11px 14px;font-size:12px;color:#7a5e1a;margin-bottom:20px;line-height:1.5;}
+  .div{height:1px;background:var(--leaf-pale);margin:28px 0;}
+
+  .budget-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;}
+  .budget-opt{padding:10px 8px;border:1.5px solid var(--border);border-radius:8px;text-align:center;cursor:pointer;transition:all .15s;user-select:none;}
+  .budget-opt:hover{border-color:var(--leaf);}
+  .budget-opt.sel{border-color:var(--leaf);background:var(--leaf-pale);}
+  .budget-opt .amt{font-size:12px;font-weight:500;color:var(--ink);}
+  .budget-opt .lbl{font-size:10px;color:var(--ink-soft);margin-top:2px;}
+
+  .urg-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px;}
+  .urg-opt{padding:8px 16px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;color:var(--ink-soft);cursor:pointer;transition:all .15s;user-select:none;}
+  .urg-opt:hover{border-color:var(--leaf);color:var(--leaf);}
+  .urg-opt.sel{background:var(--leaf);border-color:var(--leaf);color:white;font-weight:500;}
+
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:24px;border-top:1px solid var(--border);}
+  .btn{padding:11px 28px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .2s;}
+  .btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--ink-soft);}
+  .btn-ghost:hover{border-color:var(--leaf);color:var(--leaf);}
+  .btn-primary{background:var(--ink);color:white;display:flex;align-items:center;gap:8px;}
+  .btn-primary:hover{background:var(--ink-mid);}
+  .btn-primary.leaf{background:var(--leaf);}
+  .btn-primary.leaf:hover{background:#3d6649;}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .step-counter{font-size:12px;color:var(--ink-soft);}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #success{display:none;text-align:center;padding:60px 40px;}
+  #success .check-circle{width:64px;height:64px;background:var(--leaf);border-radius:50%;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;}
+  #success .check-circle svg{width:32px;height:32px;stroke:white;fill:none;stroke-width:2.5;}
+  #success h2{font-family:'Fraunces',serif;font-weight:300;font-size:26px;color:var(--ink);margin-bottom:10px;}
+  #success p{font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto;line-height:1.7;}
+  .next-steps{margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .ns-item{padding:12px 20px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ink-soft);text-align:left;min-width:160px;}
+  .ns-item strong{display:block;color:var(--ink);font-size:13px;margin-bottom:3px;}
+  .success-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px;}
+  .btn-word{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#2B579A;color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;}
+  .btn-word:hover{background:#1e3f70;}
+  .btn-word svg{width:18px;height:18px;}
+  .btn-pdf{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#c0392b;color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;}
+  .btn-pdf:hover{background:#a93226;}
+  .btn-pdf svg{width:18px;height:18px;}
+  .btn-nuevo{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:transparent;color:var(--leaf);border:1.5px solid var(--leaf);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+  .btn-nuevo:hover{background:var(--leaf-pale);}
+
+  .footer{background:var(--ink);padding:12px 52px;display:flex;justify-content:space-between;}
+  .footer span{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.8px;}
+
+  @media(max-width:620px){
+    .header,.top-bar,.form-body,.footer,#user-bar,#demo-badge{padding-left:20px;padding-right:20px;}
+    .grid-2{grid-template-columns:1fr;}.span2{grid-column:span 1;}
+    .check-cards,.check-cards.col2,.check-cards.col4,.budget-opts{grid-template-columns:1fr 1fr;}
+    .header{flex-direction:column;align-items:flex-start;}
+    .top-bar{grid-template-columns:1fr;}
+    #user-bar{flex-direction:column;align-items:flex-start;gap:8px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN — solo visible cuando AUTH_ACTIVO = true -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">Green Studio <em>RD</em></div>
+    <div class="login-sub">Diseño biofílico · Paisajismo sostenible</div>
+    <div class="login-form-name">GS-GC-F1 · Levantamiento Comercial</div>
+    <button class="btn-ms" id="btn-login" onclick="iniciarLogin()">
+      <svg viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+      Iniciar sesión con Microsoft
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <p class="login-note" id="login-note"></p>
+  </div>
+</div>
+
+<!-- FORMULARIO -->
+<div id="formulario-main" style="display:none">
+<div class="page">
+
+  <div class="header">
+    <div class="brand"><h1>Green Studio <em>RD</em></h1><p>Diseño biofílico · Paisajismo sostenible</p></div>
+    <div class="form-meta"><div class="code">GS-GC-F1 · Levantamiento Comercial</div><div class="ver">Versión 1 · 2025</div></div>
+  </div>
+
+  <div id="user-bar">
+    <div class="user-info">
+      <div class="user-avatar" id="u-avatar">--</div>
+      <div><div class="user-name" id="u-name"></div><div class="user-email" id="u-email"></div></div>
+    </div>
+    <div class="user-badge">Sesión activa · Microsoft 365</div>
+  </div>
+
+  <div id="demo-badge">
+    <div class="demo-dot"></div>
+    <span>Modo local — el formulario funciona completamente. Word y PDF se descargan al guardar. La integración con SharePoint y el canal <strong>A cotizar</strong> en Teams se activa cambiando <strong>AUTH_ACTIVO</strong> a <code>true</code> y configurando los IDs en el bloque CFG.</span>
+  </div>
+
+  <!-- TOP BAR — solo fecha y encargado -->
+  <div class="top-bar">
+    <div class="tf"><label>Fecha de levantamiento</label><input type="date" id="fecha-lev"></div>
+    <div class="tf"><label>Encargado de ventas</label><input type="text" id="encargado" placeholder="Nombre completo"></div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="step active" onclick="goTo(0)">Cliente</div>
+    <div class="step" onclick="goTo(1)">Proyecto</div>
+    <div class="step" onclick="goTo(2)">Requerimientos</div>
+    <div class="step" onclick="goTo(3)">Comercial</div>
+    <div class="step" onclick="goTo(4)">Cierre</div>
+  </div>
+
+  <div class="form-body">
+
+    <!-- S1 CLIENTE -->
+    <div class="section visible" id="s0">
+      <div class="section-title">Datos del cliente</div>
+      <div class="section-desc">Información del contacto principal y origen del prospecto</div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="f"><label>Nombre del cliente <span class="req">*</span></label><input type="text" id="cli-nombre" placeholder="Nombre completo o razón social"></div>
+        <div class="f"><label>Cédula / RNC</label><input type="text" id="cli-rnc" placeholder="000-0000000-0"></div>
+        <div class="f"><label>Teléfono principal <span class="req">*</span></label><input type="tel" id="cli-tel" placeholder="(809) 000-0000"></div>
+        <div class="f"><label>WhatsApp</label><input type="tel" id="cli-wa" placeholder="(809) 000-0000"></div>
+        <div class="f span2"><label>Correo electrónico <span class="req">*</span></label><input type="email" id="cli-email" placeholder="cliente@correo.com"></div>
+      </div>
+      <div class="div"></div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>¿Cómo nos conoció?</label>
+        <div class="chips" id="origen">
+          <div class="chip" onclick="selChip(this,'origen')">Instagram</div>
+          <div class="chip" onclick="selChip(this,'origen')">Referido</div>
+          <div class="chip" onclick="selChip(this,'origen')">Google</div>
+          <div class="chip" onclick="selChip(this,'origen')">Facebook</div>
+          <div class="chip" onclick="selChip(this,'origen')">Cliente anterior</div>
+          <div class="chip" onclick="selChip(this,'origen')">Evento / feria</div>
+          <div class="chip" onclick="selChip(this,'origen')">Otro</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="f"><label>Nombre del referido</label><input type="text" id="referido" placeholder="¿Quién los recomendó?"></div>
+        <div class="f"><label>Tipo de cliente</label>
+          <select id="tipo-cliente"><option value="">Seleccionar…</option><option>Persona física — residencial</option><option>Empresa privada</option><option>Institución / corporativo</option><option>Constructor / desarrollador</option><option>Cliente recurrente</option></select>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2 PROYECTO -->
+    <div class="section" id="s1">
+      <div class="section-title">Datos del proyecto</div>
+      <div class="section-desc">Ubicación, tipo y alcance del trabajo solicitado</div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="f span2"><label>Dirección del área a intervenir <span class="req">*</span></label><input type="text" id="direccion" placeholder="Calle, número, sector, ciudad"></div>
+        <div class="f"><label>Sector / ciudad</label><input type="text" id="sector" placeholder="Ej. Piantini, Santo Domingo"></div>
+        <div class="f"><label>Nombre del proyecto / propiedad</label><input type="text" id="nom-proyecto" placeholder="Ej. Residencia Las Palmas"></div>
+      </div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Línea de servicio solicitada <span class="req">*</span></label>
+        <div class="check-cards" id="lineas-serv">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Botánica Permanente</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Botánica Preservada</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Paisajismo</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Mantenimiento</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Natur Grass</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Techos Verdes</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Green Walls</span></label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Alcance del proyecto</label>
+        <div class="chips" id="alcance">
+          <div class="chip" onclick="selChip(this,'alcance')">Solo diseño</div>
+          <div class="chip" onclick="selChip(this,'alcance')">Diseño + ejecución</div>
+          <div class="chip" onclick="selChip(this,'alcance')">Solo ejecución</div>
+          <div class="chip" onclick="selChip(this,'alcance')">Por definir</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="f"><label>Área aproximada (m²)</label><input type="number" id="area" placeholder="0" step="0.5"></div>
+        <div class="f"><label>Tipo de espacio</label>
+          <select id="tipo-espacio"><option value="">Seleccionar…</option><option>Exterior — jardín / patio</option><option>Exterior — terraza / azotea</option><option>Interior</option><option>Semi-interior / lobby</option><option>Mixto</option></select>
+        </div>
+        <div class="f span2"><label>¿Incluye servicios adicionales?</label>
+          <div class="check-cards col2">
+            <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sistema de riego</span></label>
+            <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Iluminación</span></label>
+            <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Ninguno por ahora</span></label>
+            <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Por definir</span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3 REQUERIMIENTOS -->
+    <div class="section" id="s2">
+      <div class="section-title">Requerimientos del cliente</div>
+      <div class="section-desc">Necesidades, preferencias estéticas y condiciones del espacio</div>
+      <div class="f" style="margin-bottom:20px;"><label>Estilo de diseño preferido</label>
+        <div class="chips" id="estilo">
+          <div class="chip" onclick="selChipMulti(this)">Tropical / exuberante</div>
+          <div class="chip" onclick="selChipMulti(this)">Minimalista</div>
+          <div class="chip" onclick="selChipMulti(this)">Mediterráneo</div>
+          <div class="chip" onclick="selChipMulti(this)">Biofílico / natural</div>
+          <div class="chip" onclick="selChipMulti(this)">Moderno / geométrico</div>
+          <div class="chip" onclick="selChipMulti(this)">Sin preferencia</div>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;"><label>Uso esperado del espacio</label>
+        <div class="chips" id="uso">
+          <div class="chip" onclick="selChipMulti(this)">Entretenimiento / social</div>
+          <div class="chip" onclick="selChipMulti(this)">Descanso / bienestar</div>
+          <div class="chip" onclick="selChipMulti(this)">Estético / decorativo</div>
+          <div class="chip" onclick="selChipMulti(this)">Trabajo / productividad</div>
+          <div class="chip" onclick="selChipMulti(this)">Paso / circulación</div>
+          <div class="chip" onclick="selChipMulti(this)">Mixto</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="f span2"><label>Plantas, elementos o referencias que le gustan</label><textarea id="ref-pos" placeholder="Plantas específicas, proyectos de inspiración, colores preferidos..."></textarea></div>
+        <div class="f span2"><label>Plantas o elementos que NO desea</label><textarea id="ref-neg" placeholder="Restricciones, alergias, elementos que quiere evitar..."></textarea></div>
+      </div>
+      <div class="f" style="margin-bottom:20px;"><label>Componentes de diseño a considerar</label>
+        <div class="check-cards col4" id="comp-diseno">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Hard Scape</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Vegetación existente</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Riego</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Muros</span></label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;"><label>¿Tiene vegetación o infraestructura existente que conservar?</label>
+        <div class="chips" id="existente">
+          <div class="chip" onclick="selChip(this,'existente')">No, espacio limpio</div>
+          <div class="chip" onclick="selChip(this,'existente')">Sí — plantas a conservar</div>
+          <div class="chip" onclick="selChip(this,'existente')">Sí — estructuras a respetar</div>
+          <div class="chip" onclick="selChip(this,'existente')">Por evaluar en visita</div>
+        </div>
+      </div>
+      <div class="f"><label>Observaciones adicionales del cliente</label><textarea id="obs" placeholder="Cualquier detalle relevante..."></textarea></div>
+    </div>
+
+    <!-- S4 COMERCIAL -->
+    <div class="section" id="s3">
+      <div class="section-title">Condiciones comerciales</div>
+      <div class="section-desc">Presupuesto, plazos y condiciones de pago discutidas con el cliente</div>
+      <div class="f" style="margin-bottom:24px;"><label>Rango de presupuesto estimado (DOP)</label>
+        <div class="budget-opts" id="budget">
+          <div class="budget-opt" onclick="selBudget(this)"><div class="amt">&lt; RD$50K</div><div class="lbl">Proyecto pequeño</div></div>
+          <div class="budget-opt" onclick="selBudget(this)"><div class="amt">RD$50K–150K</div><div class="lbl">Proyecto mediano</div></div>
+          <div class="budget-opt" onclick="selBudget(this)"><div class="amt">RD$150K–300K</div><div class="lbl">Proyecto estándar</div></div>
+          <div class="budget-opt" onclick="selBudget(this)"><div class="amt">RD$300K–500K</div><div class="lbl">Proyecto amplio</div></div>
+          <div class="budget-opt" onclick="selBudget(this)"><div class="amt">&gt; RD$500K</div><div class="lbl">Proyecto grande</div></div>
+          <div class="budget-opt" onclick="selBudget(this)"><div class="amt">Por definir</div><div class="lbl">Sin indicar</div></div>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:24px;"><label>Urgencia / plazo esperado</label>
+        <div class="urg-row" id="urgencia">
+          <div class="urg-opt" onclick="selUrg(this)">Urgente (&lt; 1 semana)</div>
+          <div class="urg-opt" onclick="selUrg(this)">1–2 semanas</div>
+          <div class="urg-opt" onclick="selUrg(this)">2–4 semanas</div>
+          <div class="urg-opt" onclick="selUrg(this)">1–2 meses</div>
+          <div class="urg-opt" onclick="selUrg(this)">Sin urgencia</div>
+        </div>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="f"><label>Condición de pago preferida</label>
+          <select id="cond-pago"><option value="">Seleccionar…</option><option>50% anticipo / 50% entrega</option><option>30% / 40% / 30% por fases</option><option>Pago total anticipado</option><option>Por negociar</option></select>
+        </div>
+        <div class="f"><label>¿Ya visitó otras empresas de paisajismo?</label>
+          <select id="competencia"><option value="">Seleccionar…</option><option>No, somos su primera opción</option><option>Sí, está comparando opciones</option><option>No lo mencionó</option></select>
+        </div>
+        <div class="f"><label>Fecha de visita técnica acordada</label><input type="date" id="fecha-visita"></div>
+        <div class="f"><label>Temperatura del prospecto</label>
+          <select id="temperatura"><option value="">Seleccionar…</option><option>Caliente — listo para decidir</option><option>Tibio — evaluando opciones</option><option>Frío — en etapa exploratoria</option></select>
+        </div>
+      </div>
+      <div class="f"><label>Notas del encargado de ventas</label><textarea id="notas-ventas" placeholder="Observaciones internas, próximos pasos, compromisos..."></textarea></div>
+    </div>
+
+    <!-- S5 CIERRE -->
+    <div class="section" id="s4">
+      <div class="section-title">Confirmación y envío</div>
+      <div class="section-desc">Revisar antes de guardar.</div>
+      <div class="nota" id="nota-cierre">Al guardar, Power Automate registrará el levantamiento en SharePoint y enviará una notificación al canal <strong>A cotizar</strong> en el equipo de Administración en Teams.</div>
+      <div class="grid-2" style="margin-bottom:24px;">
+        <div class="f"><label>Estado del prospecto</label>
+          <select id="estado"><option>Levantamiento realizado — pendiente propuesta</option><option>Visita técnica pendiente</option><option>En negociación</option><option>Contrato firmado</option><option>No continuó</option></select>
+        </div>
+        <div class="f"><label>Próxima acción</label>
+          <select id="prox-accion"><option>Coordinar visita técnica con Diseño</option><option>Enviar propuesta comercial</option><option>Esperar respuesta del cliente</option><option>Seguimiento en X días</option></select>
+        </div>
+        <div class="f"><label>Fecha de seguimiento</label><input type="date" id="fecha-seg"></div>
+        <div class="f"><label>¿Notificar a Diseño ahora?</label>
+          <select id="notif"><option>Sí — proyecto confirmado, iniciar proceso</option><option>No — pendiente confirmación del cliente</option></select>
+        </div>
+      </div>
+      <div class="f"><label>Confirmación del cliente (nombre)</label><input type="text" id="conf-cliente" placeholder="Nombre de quien confirmó la reunión y los datos"></div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="success">
+      <div class="check-circle"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>Levantamiento guardado</h2>
+      <p id="suc-msg"></p>
+      <div class="next-steps" id="suc-steps"></div>
+      <div class="success-actions">
+        <button class="btn-word" onclick="descargarWord()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Descargar Word (.docx)
+        </button>
+        <button class="btn-pdf" onclick="descargarPDF()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Descargar PDF
+        </button>
+        <button class="btn-nuevo" onclick="location.reload()">+ Nuevo levantamiento</button>
+      </div>
+    </div>
+
+    <!-- NAV -->
+    <div class="nav" id="nav-bar">
+      <button class="btn btn-ghost" id="btn-back" onclick="navBack()" style="visibility:hidden;">Anterior</button>
+      <span class="step-counter" id="step-ctr">Paso 1 de 5</span>
+      <button class="btn btn-primary leaf" id="btn-next" onclick="navNext()">Siguiente →</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>GS-GC-F1 · Versión 1 · 2025</span>
+    <span>Gestión Comercial — Green Studio RD</span>
+    <span>Uso interno</span>
+  </div>
+</div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CONFIGURACIÓN — INTEGRACIÓN SHAREPOINT / AZURE / POWER AUTOMATE   ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  PASO 1 — Azure Portal (portal.azure.com)                           ║
+// ║    · Entra ID → App registrations → New registration                ║
+// ║    · Redirect URI: Single-page application → URL del formulario     ║
+// ║    · API permissions: User.Read, Sites.ReadWrite.All                ║
+// ║    · Copia el Application (client) ID y el Directory (tenant) ID    ║
+// ║                                                                      ║
+// ║  PASO 2 — Power Automate (make.powerautomate.com)                   ║
+// ║    · Nuevo flujo: "When an HTTP request is received"                ║
+// ║    · Acción 1: SharePoint → "Create item" → lista Levantamientos    ║
+// ║    · Acción 2: Teams → "Post message in a channel"                  ║
+// ║                  Canal: "A cotizar" (Administración)                ║
+// ║                                                                      ║
+// ║  Mensaje sugerido para Teams canal "A cotizar":                     ║
+// ║  📋 Nuevo levantamiento comercial                                   ║
+// ║  Cliente: @{triggerBody()?['cliente_nombre']}                       ║
+// ║  Encargado: @{triggerBody()?['encargado']}                          ║
+// ║  Líneas: @{triggerBody()?['lineas_servicio']}                       ║
+// ║  Presupuesto: @{triggerBody()?['presupuesto']}                      ║
+// ║  Estado: @{triggerBody()?['estado_prospecto']}                      ║
+// ║  Próxima acción: @{triggerBody()?['proxima_accion']}                ║
+// ║                                                                      ║
+// ║  PASO 3 — SharePoint List (Columnas recomendadas)                   ║
+// ║    Title (texto), encargado, encargado_email, fecha_levantamiento,  ║
+// ║    cliente_nombre, cliente_rnc, cliente_telefono, cliente_whatsapp,  ║
+// ║    cliente_email, como_conocio, tipo_cliente, direccion, sector,     ║
+// ║    nombre_proyecto, lineas_servicio, alcance, area_m2, tipo_espacio, ║
+// ║    estilo_diseno, uso_espacio, presupuesto, urgencia, condicion_pago,║
+// ║    temperatura, estado_prospecto, proxima_accion, fecha_seguimiento, ║
+// ║    fecha_registro (todos Texto de una línea o Fecha según tipo)      ║
+// ║                                                                      ║
+// ║  PASO 4 — Activar aquí                                              ║
+// ║    · Cambia AUTH_ACTIVO a true                                       ║
+// ║    · Pega CLIENT_ID, TENANT_ID y PA_URL                             ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+const CFG = {
+  AUTH_ACTIVO:  false,                        // ← true cuando tengas Entra ID
+  CLIENT_ID:    "TU-CLIENT-ID",               // ← portal.azure.com → Entra ID → App registrations
+  TENANT_ID:    "TU-TENANT-ID",               // ← portal.azure.com → Entra ID → Overview
+  PA_URL:       "TU-URL-POWER-AUTOMATE",      // ← make.powerautomate.com → HTTP trigger URL
+  DOMINIO:      "greenstudiord.com",          // ← dominio corporativo para validar correo
+};
+// ═══════════════════════════════════════════════════════════════════════
+
+let msalInst = null, userAcc = null, datos = {};
+let cur = 0; const TOTAL = 5;
+
+async function boot() {
+  const hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fecha-lev').value = hoy;
+  document.querySelectorAll('input[type=date]').forEach(d=>{ if(!d.value) d.value=hoy; });
+
+  if (CFG.AUTH_ACTIVO) {
+    document.getElementById('demo-badge').classList.add('hidden');
+    document.getElementById('login-note').textContent = `Solo accesible con cuenta @${CFG.DOMINIO}.`;
+    try {
+      msalInst = new msal.PublicClientApplication({
+        auth:{ clientId:CFG.CLIENT_ID, authority:`https://login.microsoftonline.com/${CFG.TENANT_ID}`, redirectUri: location.href.split('?')[0] }
+      });
+      await msalInst.initialize();
+      const r = await msalInst.handleRedirectPromise();
+      if(r){ procesarLogin(r); return; }
+      const cuentas = msalInst.getAllAccounts();
+      if(cuentas.length){ procesarLogin({account:cuentas[0]}); return; }
+    } catch(e){ console.warn(e); }
+    document.getElementById('login-overlay').classList.add('vis');
+  } else {
+    // Modo local: acceso directo sin autenticación
+    document.getElementById('formulario-main').style.display='block';
+    actualizarNotaCierre();
+    updateNav();
+  }
+}
+
+async function iniciarLogin() {
+  const btn=document.getElementById('btn-login');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Conectando...';
+  document.getElementById('login-error').style.display='none';
+  try {
+    const r = await msalInst.loginPopup({scopes:['User.Read']});
+    procesarLogin(r);
+  } catch(e) {
+    btn.disabled=false;
+    btn.innerHTML='<svg viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg> Iniciar sesión con Microsoft';
+    const el=document.getElementById('login-error');
+    el.style.display='block';
+    el.textContent=e.errorCode==='user_cancelled'?'Inicio de sesión cancelado.':'Error al conectar. Intenta de nuevo.';
+  }
+}
+
+function procesarLogin(r) {
+  const email=r.account.username, dom=email.split('@')[1];
+  // Verificación de correo corporativo — solo permite @DOMINIO
+  if(dom!==CFG.DOMINIO){
+    const el=document.getElementById('login-error');
+    el.style.display='block'; el.textContent=`Acceso restringido. Solo cuentas @${CFG.DOMINIO}.`;
+    document.getElementById('btn-login').disabled=false;
+    msalInst.logoutPopup({account:r.account}).catch(()=>{});
+    return;
+  }
+  userAcc=r.account;
+  const nombre=r.account.name||email;
+  const ini=nombre.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('u-avatar').textContent=ini;
+  document.getElementById('u-name').textContent=nombre;
+  document.getElementById('u-email').textContent=email;
+  document.getElementById('user-bar').classList.add('vis');
+  document.getElementById('demo-badge').classList.add('hidden');
+  const enc=document.getElementById('encargado');
+  enc.value=nombre; enc.readOnly=true;
+  document.getElementById('login-overlay').classList.remove('vis');
+  document.getElementById('formulario-main').style.display='block';
+  actualizarNotaCierre();
+  updateNav();
+}
+
+function actualizarNotaCierre() {
+  const paListo = CFG.PA_URL && CFG.PA_URL.startsWith('https');
+  if(!paListo){
+    const n=document.getElementById('nota-cierre');
+    n.style.borderLeftColor='var(--border)'; n.style.background='var(--leaf-mist)'; n.style.color='var(--ink-soft)';
+    n.textContent='Modo local — los datos se guardarán y podrás descargar Word y PDF. La integración con SharePoint y el canal A cotizar en Teams se activa cuando configures AUTH_ACTIVO, CLIENT_ID, TENANT_ID y PA_URL en el bloque CFG.';
+  }
+}
+
+function goTo(n){
+  document.querySelectorAll('.section')[cur].classList.remove('visible');
+  document.querySelectorAll('.step')[cur].classList.remove('active');
+  if(cur<n) document.querySelectorAll('.step')[cur].classList.add('done');
+  cur=n;
+  document.querySelectorAll('.section')[cur].classList.add('visible');
+  document.querySelectorAll('.step')[cur].classList.add('active');
+  updateNav(); window.scrollTo({top:0,behavior:'smooth'});
+}
+async function navNext(){ if(cur<TOTAL-1) goTo(cur+1); else await enviar(); }
+function navBack(){ if(cur>0) goTo(cur-1); }
+function updateNav(){
+  document.getElementById('btn-back').style.visibility=cur===0?'hidden':'visible';
+  document.getElementById('btn-next').textContent=cur===TOTAL-1?'Guardar y enviar ✓':'Siguiente →';
+  document.getElementById('step-ctr').textContent=`Paso ${cur+1} de ${TOTAL}`;
+}
+
+function selChip(el,g){ document.getElementById(g).querySelectorAll('.chip').forEach(c=>c.classList.remove('sel')); el.classList.add('sel'); }
+function selChipMulti(el){ el.classList.toggle('sel'); }
+function toggleCC(cb){ cb.closest('.cc').classList.toggle('sel-card',cb.checked); }
+function selBudget(el){ document.getElementById('budget').querySelectorAll('.budget-opt').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); }
+function selUrg(el){ document.getElementById('urgencia').querySelectorAll('.urg-opt').forEach(o=>o.classList.remove('sel')); el.classList.add('sel'); }
+
+function chips(id){ return [...document.getElementById(id).querySelectorAll('.chip.sel')].map(c=>c.textContent).join(', '); }
+function checks(id){ return [...document.getElementById(id).querySelectorAll('input[type=checkbox]:checked')].map(c=>c.closest('.cc').querySelector('.cc-text').textContent).join(', '); }
+function v(id){ return document.getElementById(id)?document.getElementById(id).value:''; }
+
+function recolectar(){
+  const bud=document.querySelector('#budget .budget-opt.sel');
+  const urg=document.querySelector('#urgencia .urg-opt.sel');
+  return {
+    // "Title" es requerido por SharePoint List — usa nombre del cliente
+    Title: v('cli-nombre') || 'Sin nombre',
+    encargado: v('encargado'),
+    encargado_email: userAcc ? userAcc.username : '',
+    fecha_levantamiento: v('fecha-lev'),
+    cliente_nombre: v('cli-nombre'),
+    cliente_rnc: v('cli-rnc'),
+    cliente_telefono: v('cli-tel'),
+    cliente_whatsapp: v('cli-wa'),
+    cliente_email: v('cli-email'),
+    como_conocio: chips('origen'),
+    referido: v('referido'),
+    tipo_cliente: v('tipo-cliente'),
+    direccion: v('direccion'),
+    sector: v('sector'),
+    nombre_proyecto: v('nom-proyecto'),
+    lineas_servicio: checks('lineas-serv'),
+    alcance: chips('alcance'),
+    area_m2: v('area'),
+    tipo_espacio: v('tipo-espacio'),
+    estilo_diseno: chips('estilo'),
+    uso_espacio: chips('uso'),
+    referencias_positivas: v('ref-pos'),
+    referencias_negativas: v('ref-neg'),
+    componentes_diseno: checks('comp-diseno'),
+    vegetacion_existente: chips('existente'),
+    observaciones: v('obs'),
+    presupuesto: bud ? bud.querySelector('.amt').textContent : '',
+    urgencia: urg ? urg.textContent : '',
+    condicion_pago: v('cond-pago'),
+    competencia: v('competencia'),
+    fecha_visita: v('fecha-visita'),
+    temperatura: v('temperatura'),
+    notas_ventas: v('notas-ventas'),
+    estado_prospecto: v('estado'),
+    proxima_accion: v('prox-accion'),
+    fecha_seguimiento: v('fecha-seg'),
+    notif_diseno: v('notif'),
+    confirmacion_cliente: v('conf-cliente'),
+    fecha_registro: new Date().toISOString(),
+  };
+}
+
+async function enviar(){
+  const btn=document.getElementById('btn-next');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Guardando...';
+  datos=recolectar();
+  const paListo=CFG.PA_URL&&CFG.PA_URL.startsWith('https');
+  if(paListo){
+    try{
+      // Obtener token de acceso si hay sesión activa (para autenticar ante Power Automate)
+      let tok='';
+      if(userAcc&&msalInst){
+        try{
+          const tr=await msalInst.acquireTokenSilent({scopes:['User.Read'],account:userAcc});
+          tok=tr.accessToken;
+        }catch(e){}
+      }
+      // Enviar a Power Automate → SharePoint List
+      const r=await fetch(CFG.PA_URL,{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          ...(tok?{'Authorization':'Bearer '+tok}:{})
+        },
+        body:JSON.stringify(datos)
+      });
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      mostrarExito(true);
+    }catch(e){
+      btn.disabled=false; btn.textContent='Guardar y enviar ✓';
+      alert('Error al guardar en SharePoint.\n\nVerifica:\n· PA_URL está correctamente pegado\n· El flujo de Power Automate está activo\n· Los permisos del tenant permiten llamadas externas\n\nDetalle: '+e.message);
+    }
+  } else {
+    mostrarExito(false);
+  }
+}
+
+function mostrarExito(conectado){
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  document.getElementById('nav-bar').style.display='none';
+  document.getElementById('success').style.display='block';
+  document.querySelectorAll('.step')[cur].classList.remove('active');
+  document.querySelectorAll('.step')[cur].classList.add('done');
+  if(conectado){
+    document.getElementById('suc-msg').textContent='Registrado en SharePoint. Notificación enviada al canal A cotizar en Teams.';
+    document.getElementById('suc-steps').innerHTML='<div class="ns-item"><strong>SharePoint</strong>Item creado en la lista</div><div class="ns-item"><strong>Teams — A cotizar</strong>Notificación enviada</div><div class="ns-item"><strong>Word / PDF</strong>Listos para descargar</div>';
+  } else {
+    document.getElementById('suc-msg').textContent='Datos guardados localmente. Descarga Word o PDF para conservar el registro. La sincronización con SharePoint se activa al configurar la conexión.';
+    document.getElementById('suc-steps').innerHTML='<div class="ns-item"><strong>Local</strong>Datos guardados</div><div class="ns-item"><strong>Word / PDF</strong>Listos para descargar</div>';
+  }
+  setTimeout(()=>descargarWord(),800);
+}
+
+async function descargarWord(){
+  const d=datos;
+  if(!d||!Object.keys(d).length){alert('Completa y guarda el formulario primero.');return;}
+  const{Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,BorderStyle,AlignmentType,Packer,ShadingType}=docx;
+  const V='4a7c59',GCL='f2f7f3',INK='1c2b1f',SO='6b8870',GRD='c9d9cc';
+  const nb={style:BorderStyle.NONE}, sb={style:BorderStyle.SINGLE,size:2,color:GRD};
+  const fila=(l,val)=>new TableRow({children:[
+    new TableCell({width:{size:32,type:WidthType.PERCENTAGE},shading:{fill:GCL,type:ShadingType.CLEAR},borders:{top:nb,bottom:sb,left:nb,right:nb},children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:l,size:18,color:SO,font:'Calibri'})]})]}),
+    new TableCell({width:{size:68,type:WidthType.PERCENTAGE},borders:{top:nb,bottom:sb,left:nb,right:nb},children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:val||'—',size:18,color:INK,font:'Calibri'})]})]})
+  ]});
+  const sh=(t)=>new Paragraph({spacing:{before:280,after:60},shading:{fill:V,type:ShadingType.CLEAR},indent:{left:120,right:120},children:[new TextRun({text:t,size:19,bold:true,color:'FFFFFF',font:'Calibri'})]});
+  const tb=(rows)=>new Table({width:{size:100,type:WidthType.PERCENTAGE},rows});
+
+  const doc2=new Document({sections:[{
+    properties:{page:{margin:{top:720,right:720,bottom:900,left:720}}},
+    children:[
+      new Paragraph({spacing:{after:0},children:[new TextRun({text:'GREEN STUDIO RD',size:40,bold:true,color:V,font:'Calibri'})]}),
+      new Paragraph({spacing:{after:40},children:[new TextRun({text:'Diseño biofílico · Paisajismo sostenible',size:18,color:SO,font:'Calibri'})]}),
+      new Paragraph({spacing:{after:20},border:{bottom:{style:BorderStyle.SINGLE,size:6,color:V}},children:[new TextRun({text:'GS-GC-F1  ·  LEVANTAMIENTO COMERCIAL',size:26,bold:true,color:INK,font:'Calibri'})]}),
+      new Paragraph({spacing:{before:80,after:300},children:[new TextRun({text:`Fecha: ${d.fecha_levantamiento||'—'}   ·   Encargado: ${d.encargado||'—'}`,size:17,color:SO,font:'Calibri'})]}),
+      sh('1.  DATOS DEL CLIENTE'),
+      tb([fila('Cliente',d.cliente_nombre),fila('Cédula / RNC',d.cliente_rnc),fila('Teléfono',d.cliente_telefono),fila('WhatsApp',d.cliente_whatsapp),fila('Email',d.cliente_email),fila('¿Cómo nos conoció?',d.como_conocio),fila('Referido',d.referido),fila('Tipo de cliente',d.tipo_cliente)]),
+      sh('2.  DATOS DEL PROYECTO'),
+      tb([fila('Dirección',d.direccion),fila('Sector / ciudad',d.sector),fila('Nombre del proyecto',d.nombre_proyecto),fila('Líneas de servicio',d.lineas_servicio),fila('Alcance',d.alcance),fila('Área (m²)',d.area_m2),fila('Tipo de espacio',d.tipo_espacio)]),
+      sh('3.  REQUERIMIENTOS DEL CLIENTE'),
+      tb([fila('Estilo de diseño',d.estilo_diseno),fila('Uso del espacio',d.uso_espacio),fila('Referencias positivas',d.referencias_positivas),fila('No desea',d.referencias_negativas),fila('Componentes de diseño',d.componentes_diseno),fila('Vegetación existente',d.vegetacion_existente),fila('Observaciones',d.observaciones)]),
+      sh('4.  CONDICIONES COMERCIALES'),
+      tb([fila('Presupuesto estimado',d.presupuesto),fila('Urgencia / plazo',d.urgencia),fila('Condición de pago',d.condicion_pago),fila('Competencia',d.competencia),fila('Fecha visita técnica',d.fecha_visita),fila('Temperatura prospecto',d.temperatura),fila('Notas de ventas',d.notas_ventas)]),
+      sh('5.  CIERRE Y ESTADO'),
+      tb([fila('Estado del prospecto',d.estado_prospecto),fila('Próxima acción',d.proxima_accion),fila('Fecha de seguimiento',d.fecha_seguimiento),fila('Notificar a Diseño',d.notif_diseno),fila('Confirmación cliente',d.confirmacion_cliente)]),
+      new Paragraph({spacing:{before:360},border:{top:{style:BorderStyle.SINGLE,size:2,color:GRD}},alignment:AlignmentType.RIGHT,children:[new TextRun({text:`Registrado por: ${d.encargado}${d.encargado_email?' ('+d.encargado_email+')':''}   ·   ${new Date().toLocaleString('es-DO')}`,size:16,color:'aaaaaa',font:'Calibri'})]}),
+      new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'GS-GC-F1 · Versión 1 · 2025 · Uso interno — Green Studio RD',size:16,color:'aaaaaa',font:'Calibri'})]})
+    ]
+  }]});
+  const blob=await Packer.toBlob(doc2);
+  const cli=(d.cliente_nombre||'cliente').replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'-').slice(0,30);
+  const fecha=(d.fecha_levantamiento||new Date().toISOString().split('T')[0]);
+  saveAs(blob,`GS-GC-F1_${fecha}_${cli}.docx`);
+}
+
+/* ─── PDF ─── */
+function descargarPDF(){
+  const d=datos;
+  if(!d||!Object.keys(d).length){alert('Completa y guarda el formulario primero.');return;}
+
+  const seccion=(titulo,filas)=>`
+    <div class="sh"><span>${titulo}</span></div>
+    <table class="info-table">${filas.map(([l,v])=>`
+      <tr><td class="lbl">${l}</td><td>${v||'—'}</td></tr>`).join('')}
+    </table>`;
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    @page{margin:18mm 15mm 20mm;}
+    body{font-family:Calibri,Arial,sans-serif;color:#1c2b1f;font-size:11px;margin:0;}
+    .hdr{border-bottom:3px solid #4a7c59;padding-bottom:10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:flex-end;}
+    .brand{font-size:20px;font-weight:bold;color:#4a7c59;}
+    .brand span{display:block;font-size:9px;font-weight:normal;color:#6b8870;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+    .meta{text-align:right;font-size:10px;color:#6b8870;line-height:1.6;}
+    .meta strong{font-size:12px;color:#1c2b1f;}
+    .sh{background:#4a7c59;padding:6px 12px;margin-top:14px;}
+    .sh span{font-size:11px;font-weight:bold;color:white;letter-spacing:.5px;}
+    table{width:100%;border-collapse:collapse;}
+    .info-table td{padding:5px 10px;border-bottom:1px solid #c9d9cc;font-size:11px;vertical-align:top;}
+    .info-table td.lbl{background:#f2f7f3;color:#6b8870;width:32%;font-weight:500;}
+    .footer{margin-top:14px;padding-top:8px;border-top:1px solid #c9d9cc;display:flex;justify-content:space-between;font-size:9px;color:#aaa;}
+    @media print{button{display:none!important;}}
+  </style></head><body>
+  <div class="hdr">
+    <div><div class="brand">GREEN STUDIO RD<span>Diseño biofílico · Paisajismo sostenible</span></div></div>
+    <div class="meta"><strong>GS-GC-F1 · LEVANTAMIENTO COMERCIAL</strong><br>Fecha: ${d.fecha_levantamiento||'—'} · Encargado: ${d.encargado||'—'}</div>
+  </div>
+  ${seccion('1.  DATOS DEL CLIENTE',[
+    ['Cliente',d.cliente_nombre],['Cédula / RNC',d.cliente_rnc],
+    ['Teléfono',d.cliente_telefono],['WhatsApp',d.cliente_whatsapp],
+    ['Email',d.cliente_email],['¿Cómo nos conoció?',d.como_conocio],
+    ['Referido',d.referido],['Tipo de cliente',d.tipo_cliente]
+  ])}
+  ${seccion('2.  DATOS DEL PROYECTO',[
+    ['Dirección',d.direccion],['Sector / ciudad',d.sector],
+    ['Nombre del proyecto',d.nombre_proyecto],['Líneas de servicio',d.lineas_servicio],
+    ['Alcance',d.alcance],['Área (m²)',d.area_m2],['Tipo de espacio',d.tipo_espacio]
+  ])}
+  ${seccion('3.  REQUERIMIENTOS DEL CLIENTE',[
+    ['Estilo de diseño',d.estilo_diseno],['Uso del espacio',d.uso_espacio],
+    ['Referencias positivas',d.referencias_positivas],['No desea',d.referencias_negativas],
+    ['Componentes de diseño',d.componentes_diseno],['Vegetación existente',d.vegetacion_existente],
+    ['Observaciones',d.observaciones]
+  ])}
+  ${seccion('4.  CONDICIONES COMERCIALES',[
+    ['Presupuesto estimado',d.presupuesto],['Urgencia / plazo',d.urgencia],
+    ['Condición de pago',d.condicion_pago],['Competencia',d.competencia],
+    ['Fecha visita técnica',d.fecha_visita],['Temperatura prospecto',d.temperatura],
+    ['Notas de ventas',d.notas_ventas]
+  ])}
+  ${seccion('5.  CIERRE Y ESTADO',[
+    ['Estado del prospecto',d.estado_prospecto],['Próxima acción',d.proxima_accion],
+    ['Fecha de seguimiento',d.fecha_seguimiento],['Notificar a Diseño',d.notif_diseno],
+    ['Confirmación cliente',d.confirmacion_cliente]
+  ])}
+  <div class="footer">
+    <span>GS-GC-F1 · Versión 1 · 2025 · Uso interno — Green Studio RD</span>
+    <span>Registrado por: ${d.encargado||'—'}${d.encargado_email?' ('+d.encargado_email+')':''} · ${new Date().toLocaleString('es-DO')}</span>
+  </div>
+  <script>window.onload=()=>{ window.print(); }<\/script>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+}
+
+boot();
+</script>
+</body>
+</html>

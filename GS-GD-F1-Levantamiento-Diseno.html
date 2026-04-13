@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GS-GD-F1 · Levantamiento de Diseño</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,300;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/docx@8/build/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2/dist/FileSaver.min.js"></script>
+<script src="https://unpkg.com/@azure/msal-browser@2.38.3/lib/msal-browser.js" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  :root {
+    --ink:#1c2b1f;--ink-mid:#3d5442;--ink-soft:#6b8870;
+    --leaf:#4a7c59;--leaf-pale:#e6f0e9;--leaf-mist:#f2f7f3;
+    --gold:#b8933a;--gold-pale:#fdf6e8;--border:#c9d9cc;
+    --white:#ffffff;--danger:#c0392b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',sans-serif;background:var(--leaf-mist);color:var(--ink);font-size:14px;line-height:1.6;}
+  .page{max-width:880px;margin:0 auto;background:var(--white);}
+
+  /* LOGIN */
+  #login-overlay{display:none;min-height:100vh;background:var(--leaf-mist);align-items:center;justify-content:center;padding:24px;}
+  #login-overlay.vis{display:flex;}
+  .login-card{background:var(--white);border-radius:16px;border:1px solid var(--border);padding:52px 48px;max-width:420px;width:100%;text-align:center;}
+  .login-logo{font-family:'Fraunces',serif;font-weight:300;font-size:26px;color:var(--ink);margin-bottom:4px;}
+  .login-logo em{font-style:italic;color:var(--leaf);}
+  .login-sub{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:36px;font-weight:300;}
+  .login-form-name{font-size:13px;color:var(--ink-soft);background:var(--leaf-mist);border:1px solid var(--border);border-radius:8px;padding:10px 16px;margin-bottom:28px;font-weight:500;}
+  .btn-ms{width:100%;padding:13px 20px;background:#0078D4;color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;transition:background .2s;}
+  .btn-ms:hover{background:#005fa3;}.btn-ms:disabled{background:#9ab8d4;cursor:not-allowed;}
+  .btn-ms svg{width:20px;height:20px;flex-shrink:0;}
+  .login-note{margin-top:20px;font-size:11px;color:var(--ink-soft);line-height:1.6;}
+  .login-error{margin-top:16px;padding:10px 14px;background:#fdf0ef;border-left:3px solid var(--danger);border-radius:0 6px 6px 0;font-size:12px;color:var(--danger);text-align:left;display:none;}
+
+  /* HEADER */
+  .header{background:var(--ink);padding:36px 52px 30px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;position:relative;overflow:hidden;}
+  .header::before{content:'';position:absolute;width:320px;height:320px;border-radius:50%;border:40px solid var(--ink-mid);right:-80px;top:-120px;opacity:.5;}
+  .brand{position:relative;z-index:1;}
+  .brand h1{font-family:'Fraunces',serif;font-weight:300;font-size:28px;color:var(--white);letter-spacing:-.5px;line-height:1.1;}
+  .brand h1 em{font-style:italic;color:#8fc49a;}
+  .brand p{font-size:10px;font-weight:300;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.7);margin-top:5px;}
+  .form-meta{position:relative;z-index:1;text-align:right;}
+  .form-meta .code{font-family:'Fraunces',serif;font-weight:300;font-size:13px;color:var(--white);letter-spacing:1px;}
+  .form-meta .ver{font-size:10px;color:rgba(255,255,255,.6);margin-top:3px;}
+
+  /* USER BAR */
+  #user-bar{display:none;background:var(--leaf-pale);border-bottom:1px solid var(--border);padding:10px 52px;justify-content:space-between;align-items:center;}
+  #user-bar.vis{display:flex;}
+  .user-info{display:flex;align-items:center;gap:10px;}
+  .user-avatar{width:32px;height:32px;background:var(--leaf);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:white;flex-shrink:0;}
+  .user-name{font-size:13px;font-weight:500;color:var(--ink);}
+  .user-email{font-size:11px;color:var(--ink-soft);}
+  .user-badge{font-size:10px;padding:3px 10px;background:var(--leaf);color:white;border-radius:20px;font-weight:500;}
+
+  /* DEMO BADGE */
+  #demo-badge{background:#fff8e6;border-bottom:1px solid #f0c040;padding:9px 52px;font-size:11px;color:#7a5e1a;display:flex;align-items:center;gap:8px;}
+  #demo-badge.hidden{display:none;}
+  .demo-dot{width:8px;height:8px;border-radius:50%;background:#e6a817;flex-shrink:0;}
+
+  /* TOP BAR */
+  .top-bar{background:var(--leaf-pale);border-bottom:1px solid var(--border);padding:14px 52px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .top-bar .tf label{display:block;font-size:10px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-soft);margin-bottom:4px;}
+  .top-bar .tf input{width:100%;border:none;border-bottom:1.5px solid var(--border);background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);padding:3px 0;outline:none;}
+  .top-bar .tf input:focus{border-bottom-color:var(--leaf);}
+  .top-bar .tf input[readonly]{color:var(--ink-soft);cursor:default;}
+
+  /* PROGRESS */
+  .progress-bar{display:flex;border-bottom:1px solid var(--border);overflow-x:auto;}
+  .step{flex:1;min-width:100px;padding:10px 8px;text-align:center;font-size:10px;font-weight:500;letter-spacing:.8px;text-transform:uppercase;color:var(--ink-soft);border-bottom:2px solid transparent;cursor:pointer;transition:all .2s;white-space:nowrap;}
+  .step.active{color:var(--leaf);border-bottom-color:var(--leaf);background:var(--leaf-mist);}
+  .step.done{color:var(--ink-soft);border-bottom-color:var(--border);}
+  .step.done::before{content:'✓ ';color:var(--leaf);}
+
+  /* BODY */
+  .form-body{padding:44px 52px 60px;}
+  .section{display:none;animation:fadeIn .25s ease;}
+  .section.visible{display:block;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .section-title{font-family:'Fraunces',serif;font-weight:300;font-size:22px;color:var(--ink);margin-bottom:4px;letter-spacing:-.3px;}
+  .section-desc{font-size:12px;color:var(--ink-soft);margin-bottom:28px;font-weight:300;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px 32px;}
+  .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px 24px;}
+  .span2{grid-column:span 2;}
+  .span3{grid-column:span 3;}
+  .f{display:flex;flex-direction:column;gap:6px;}
+  .f label{font-size:10px;font-weight:500;letter-spacing:1px;text-transform:uppercase;color:var(--ink-soft);}
+  .f label .req{color:var(--danger);}
+  .f input,.f select,.f textarea{border:1px solid var(--border);border-radius:6px;padding:9px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--ink);background:var(--white);outline:none;transition:border-color .2s,box-shadow .2s;resize:vertical;}
+  .f input:focus,.f select:focus,.f textarea:focus{border-color:var(--leaf);box-shadow:0 0 0 3px rgba(74,124,89,.1);}
+  .f input[readonly]{background:var(--leaf-mist);color:var(--ink-soft);cursor:default;}
+  .f textarea{min-height:80px;}
+
+  .check-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px;}
+  .check-cards.col2{grid-template-columns:repeat(2,1fr);}
+  .check-cards.col4{grid-template-columns:repeat(4,1fr);}
+  .cc{padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;transition:all .15s;user-select:none;display:flex;align-items:center;gap:8px;}
+  .cc:hover{border-color:var(--leaf);background:var(--leaf-mist);}
+  .cc input{display:none;}
+  .cc-box{width:16px;height:16px;border:1.5px solid var(--border);border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+  .cc input[type=radio]~.cc-box{border-radius:50%;}
+  .cc input:checked~.cc-box{background:var(--leaf);border-color:var(--leaf);}
+  .cc input:checked~.cc-box::after{content:'';width:8px;height:5px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) translate(1px,-1px);display:block;}
+  .cc input[type=radio]:checked~.cc-box::after{width:6px;height:6px;border:none;background:white;border-radius:50%;transform:none;margin:auto;}
+  .cc input:checked~.cc-text{color:var(--ink);font-weight:500;}
+  .cc.sel-card{border-color:var(--leaf);background:var(--leaf-pale);}
+  .cc-text{font-size:12px;color:var(--ink-soft);line-height:1.3;}
+
+  /* SCALE */
+  .scale-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px;}
+  .scale-lbl{font-size:11px;color:var(--ink-soft);min-width:60px;}
+  .scale-opts{display:flex;gap:6px;}
+  .sopt{width:36px;height:36px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:all .15s;user-select:none;}
+  .sopt:hover{border-color:var(--leaf);color:var(--leaf);}
+  .sopt.sel{background:var(--ink);border-color:var(--ink);color:white;}
+
+  .nota{background:var(--gold-pale);border-left:3px solid var(--gold);border-radius:0 6px 6px 0;padding:11px 14px;font-size:12px;color:#7a5e1a;margin-bottom:20px;line-height:1.5;}
+  .div{height:1px;background:var(--leaf-pale);margin:28px 0;}
+
+  .nav{display:flex;justify-content:space-between;align-items:center;margin-top:40px;padding-top:24px;border-top:1px solid var(--border);}
+  .btn{padding:11px 28px;border-radius:6px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:all .2s;}
+  .btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--ink-soft);}
+  .btn-ghost:hover{border-color:var(--leaf);color:var(--leaf);}
+  .btn-primary{background:var(--ink);color:white;display:flex;align-items:center;gap:8px;}
+  .btn-primary:hover{background:var(--ink-mid);}
+  .btn-primary.leaf{background:var(--leaf);}
+  .btn-primary.leaf:hover{background:#3d6649;}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;}
+  .step-counter{font-size:12px;color:var(--ink-soft);}
+
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:white;border-radius:50%;animation:spin .6s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  #success{display:none;text-align:center;padding:60px 40px;}
+  #success .check-circle{width:64px;height:64px;background:var(--leaf);border-radius:50%;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;}
+  #success .check-circle svg{width:32px;height:32px;stroke:white;fill:none;stroke-width:2.5;}
+  #success h2{font-family:'Fraunces',serif;font-weight:300;font-size:26px;color:var(--ink);margin-bottom:10px;}
+  #success p{font-size:13px;color:var(--ink-soft);max-width:420px;margin:0 auto;line-height:1.7;}
+  .next-steps{margin-top:32px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+  .ns-item{padding:12px 20px;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--ink-soft);text-align:left;min-width:160px;}
+  .ns-item strong{display:block;color:var(--ink);font-size:13px;margin-bottom:3px;}
+  .success-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:28px;}
+  .btn-word{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#2B579A;color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;}
+  .btn-word:hover{background:#1e3f70;}
+  .btn-pdf{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#c0392b;color:white;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:background .2s;}
+  .btn-pdf:hover{background:#a93226;}
+  .btn-nuevo{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:transparent;color:var(--leaf);border:1.5px solid var(--leaf);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+  .btn-nuevo:hover{background:var(--leaf-pale);}
+  .btn-icon svg{width:18px;height:18px;}
+
+  .footer{background:var(--ink);padding:12px 52px;display:flex;justify-content:space-between;}
+  .footer span{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:.8px;}
+
+  @media(max-width:620px){
+    .header,.top-bar,.form-body,.footer,#user-bar,#demo-badge{padding-left:20px;padding-right:20px;}
+    .grid-2,.grid-3{grid-template-columns:1fr;}.span2,.span3{grid-column:span 1;}
+    .check-cards,.check-cards.col2,.check-cards.col4{grid-template-columns:1fr 1fr;}
+    .header{flex-direction:column;align-items:flex-start;}
+    .top-bar{grid-template-columns:1fr;}
+    #user-bar{flex-direction:column;align-items:flex-start;gap:8px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN — solo visible cuando AUTH_ACTIVO = true -->
+<div id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">Green Studio <em>RD</em></div>
+    <div class="login-sub">Diseño biofílico · Paisajismo sostenible</div>
+    <div class="login-form-name">GS-GD-F1 · Levantamiento de Diseño</div>
+    <button class="btn-ms" id="btn-login" onclick="iniciarLogin()">
+      <svg viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg>
+      Iniciar sesión con Microsoft
+    </button>
+    <div class="login-error" id="login-error"></div>
+    <p class="login-note" id="login-note"></p>
+  </div>
+</div>
+
+<!-- FORMULARIO -->
+<div id="formulario-main" style="display:none">
+<div class="page">
+
+  <div class="header">
+    <div class="brand"><h1>Green Studio <em>RD</em></h1><p>Diseño biofílico · Paisajismo sostenible</p></div>
+    <div class="form-meta"><div class="code">GS-GD-F1 · Levantamiento de Diseño</div><div class="ver">Versión 1 · 2025</div></div>
+  </div>
+
+  <div id="user-bar">
+    <div class="user-info">
+      <div class="user-avatar" id="u-avatar">--</div>
+      <div><div class="user-name" id="u-name"></div><div class="user-email" id="u-email"></div></div>
+    </div>
+    <div class="user-badge">Sesión activa · Microsoft 365</div>
+  </div>
+
+  <div id="demo-badge">
+    <div class="demo-dot"></div>
+    <span>Modo local — el formulario funciona completamente. Word y PDF se descargan al guardar. La integración con SharePoint y Teams se activa configurando el bloque CFG.</span>
+  </div>
+
+  <div class="top-bar">
+    <div class="tf"><label>Fecha de visita</label><input type="date" id="fecha-visita"></div>
+    <div class="tf"><label>Arquitecto responsable</label><input type="text" id="arquitecto" placeholder="Nombre completo"></div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="step active" onclick="goTo(0)">Área</div>
+    <div class="step" onclick="goTo(1)">Infraestructura</div>
+    <div class="step" onclick="goTo(2)">Medidas</div>
+    <div class="step" onclick="goTo(3)">Preferencias</div>
+    <div class="step" onclick="goTo(4)">Cierre</div>
+  </div>
+
+  <div class="form-body">
+
+    <!-- S1: CONDICIONES DEL ÁREA -->
+    <div class="section visible" id="s0">
+      <div class="section-title">Condiciones del área</div>
+      <div class="section-desc">Factores ambientales y físicos del espacio a intervenir</div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="f"><label>Área total aproximada (m²) <span class="req">*</span></label><input type="number" id="area-m2" placeholder="0.00" step="0.01"></div>
+        <div class="f"><label>Tipo de espacio <span class="req">*</span></label>
+          <select id="tipo-espacio">
+            <option value="">Seleccionar…</option>
+            <option>Exterior — jardín</option>
+            <option>Exterior — terraza / azotea</option>
+            <option>Interior</option>
+            <option>Semi-interior / lobby</option>
+            <option>Mixto</option>
+          </select>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Exposición solar</label>
+        <div class="check-cards col4" id="exposicion-solar">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sol pleno</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Semi-sombra</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sombra total</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Variable</span></label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Disponibilidad de agua</label>
+        <div class="check-cards col2" id="agua">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Salida de agua disponible</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sistema de riego existente</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sin acceso a agua</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Requiere instalación de riego</span></label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Nivel de humedad percibido</label>
+        <div class="scale-row">
+          <span class="scale-lbl">Muy seco</span>
+          <div class="scale-opts" id="humedad"></div>
+          <span class="scale-lbl">Muy húmedo</span>
+        </div>
+      </div>
+      <div class="f">
+        <label>Observaciones del área</label>
+        <textarea id="obs-area" placeholder="Notas sobre el entorno, vientos, salinidad, temperaturas extremas, etc."></textarea>
+      </div>
+    </div>
+
+    <!-- S2: INFRAESTRUCTURA -->
+    <div class="section" id="s1">
+      <div class="section-title">Infraestructura existente</div>
+      <div class="section-desc">Estado actual del espacio antes de la intervención</div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Elementos presentes en el área</label>
+        <div class="check-cards" id="elementos">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Caminos / senderos</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Muros / paredes</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Pérgola / estructura</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Vegetación existente</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Piscina / espejo de agua</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Iluminación instalada</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Riego instalado</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Mobiliario exterior</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Ninguno</span></label>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="f"><label>Estado general de la infraestructura</label>
+          <select id="estado-infra">
+            <option value="">Seleccionar…</option>
+            <option>Excelente — sin intervención previa</option>
+            <option>Bueno — requiere limpieza</option>
+            <option>Regular — requiere preparación</option>
+            <option>Malo — requiere trabajos previos importantes</option>
+          </select>
+        </div>
+        <div class="f"><label>¿Requiere trabajos previos?</label>
+          <select id="trabajos-previos">
+            <option value="">Seleccionar…</option>
+            <option>No</option>
+            <option>Sí — menores (limpieza, nivelación)</option>
+            <option>Sí — mayores (demolición, construcción)</option>
+          </select>
+        </div>
+        <div class="f span2"><label>Descripción de trabajos previos requeridos</label>
+          <textarea id="desc-trabajos" placeholder="Detallar los trabajos necesarios antes de la siembra o instalación..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- S3: MEDIDAS Y FOTOGRAFÍAS -->
+    <div class="section" id="s2">
+      <div class="section-title">Medidas y fotografías</div>
+      <div class="section-desc">Dimensiones registradas durante la visita técnica</div>
+      <div class="nota">Registrar aquí los datos numéricos principales. Adjuntar croquis y fotografías en SharePoint bajo la carpeta del proyecto.</div>
+      <div class="grid-3" style="margin-bottom:20px;">
+        <div class="f"><label>Largo principal (m)</label><input type="number" id="largo" placeholder="0.00" step="0.01"></div>
+        <div class="f"><label>Ancho principal (m)</label><input type="number" id="ancho" placeholder="0.00" step="0.01"></div>
+        <div class="f"><label>Altura libre (m)</label><input type="number" id="altura" placeholder="0.00" step="0.01"></div>
+        <div class="f span3"><label>Notas sobre geometría / áreas irregulares</label>
+          <textarea id="notas-geometria" placeholder="Formas irregulares, pendientes, desniveles, zonas diferenciadas, etc."></textarea>
+        </div>
+      </div>
+      <div class="div"></div>
+      <div class="section-title" style="font-size:17px;margin-bottom:16px;">Evidencia fotográfica</div>
+      <div class="grid-3">
+        <div class="f">
+          <label>¿Hay evidencia fotográfica?</label>
+          <div class="check-cards col2" style="margin-top:4px;" id="evidencia">
+            <label class="cc"><input type="radio" name="evidencia" value="Sí" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sí</span></label>
+            <label class="cc"><input type="radio" name="evidencia" value="No" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">No</span></label>
+          </div>
+        </div>
+        <div class="f"><label>Forma de envío</label>
+          <select id="envio-foto">
+            <option value="">Seleccionar…</option>
+            <option>WhatsApp</option>
+            <option>Correo electrónico</option>
+            <option>SharePoint</option>
+            <option>Teams</option>
+            <option>Pendiente de envío</option>
+          </select>
+        </div>
+        <div class="f"><label>Fecha de envío</label><input type="date" id="fecha-envio-foto"></div>
+        <div class="f span3"><label>Notas sobre las fotografías</label>
+          <textarea id="notas-fotos" placeholder="Indicar qué muestra cada foto o cualquier observación visual relevante..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- S4: PREFERENCIAS ESTÉTICAS -->
+    <div class="section" id="s3">
+      <div class="section-title">Preferencias estéticas</div>
+      <div class="section-desc">Gustos y restricciones del cliente para el diseño</div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Estilo de diseño preferido</label>
+        <div class="check-cards" id="estilo-diseno">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Tropical / exuberante</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Minimalista / limpio</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Mediterráneo</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Biofílico / natural</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Moderno / geométrico</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sin preferencia definida</span></label>
+        </div>
+      </div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Paleta de colores preferida</label>
+        <div class="check-cards col4" id="paleta">
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Verdes predominantes</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Flores coloridas</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Tonos neutros</span></label>
+          <label class="cc"><input type="checkbox" onchange="toggleCC(this)"><span class="cc-box"></span><span class="cc-text">Sin restricción</span></label>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="f span2"><label>Plantas o elementos que le gustan / referentes</label>
+          <textarea id="ref-positivas" placeholder="Plantas específicas, referencias visuales, proyectos de inspiración, etc."></textarea>
+        </div>
+        <div class="f span2"><label>Plantas o elementos que NO desea incluir</label>
+          <textarea id="ref-negativas" placeholder="Restricciones, alergias, plantas que no le gustan, elementos a evitar..."></textarea>
+        </div>
+        <div class="f span2"><label>Uso esperado del espacio</label>
+          <textarea id="uso-espacio" placeholder="¿Cómo usará el espacio? (entretenimiento, descanso, trabajo, paso, decorativo, etc.)"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- S5: CIERRE -->
+    <div class="section" id="s4">
+      <div class="section-title">Observaciones finales y cierre</div>
+      <div class="section-desc">Notas del Arquitecto Paisajista y confirmación del registro</div>
+      <div class="nota" id="nota-cierre">Al guardar, Power Automate notificará al canal de Diseño en Teams y registrará este levantamiento en la lista de SharePoint del proyecto.</div>
+      <div class="f" style="margin-bottom:20px;">
+        <label>Observaciones generales del levantamiento</label>
+        <textarea id="obs-generales" style="min-height:100px;" placeholder="Condiciones especiales, riesgos, oportunidades de diseño, aspectos relevantes no cubiertos..."></textarea>
+      </div>
+      <div class="grid-2" style="margin-bottom:20px;">
+        <div class="f"><label>¿Requiere revisita antes del diseño?</label>
+          <select id="revisita">
+            <option>No</option>
+            <option>Sí — pendiente coordinar</option>
+          </select>
+        </div>
+        <div class="f"><label>Fecha estimada de entrega del pre-diseño</label>
+          <input type="date" id="fecha-prediseno">
+        </div>
+        <div class="f span2"><label>Nombre del cliente / representante presente</label>
+          <input type="text" id="cliente-presente" placeholder="Nombre de quien estuvo presente durante la visita">
+        </div>
+      </div>
+    </div>
+
+    <!-- SUCCESS -->
+    <div id="success">
+      <div class="check-circle"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+      <h2>Levantamiento guardado</h2>
+      <p id="suc-msg"></p>
+      <div class="next-steps" id="suc-steps"></div>
+      <div class="success-actions">
+        <button class="btn-word btn-icon" onclick="descargarWord()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Descargar Word (.docx)
+        </button>
+        <button class="btn-pdf btn-icon" onclick="descargarPDF()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          Descargar PDF
+        </button>
+        <button class="btn-nuevo" onclick="location.reload()">+ Nuevo levantamiento</button>
+      </div>
+    </div>
+
+    <!-- NAV -->
+    <div class="nav" id="nav-bar">
+      <button class="btn btn-ghost" id="btn-back" onclick="navBack()" style="visibility:hidden;">Anterior</button>
+      <span class="step-counter" id="step-ctr">Paso 1 de 5</span>
+      <button class="btn btn-primary leaf" id="btn-next" onclick="navNext()">Siguiente →</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span>GS-GD-F1 · Versión 1 · 2025</span>
+    <span>Gestión Diseño — Green Studio RD</span>
+    <span>Uso interno</span>
+  </div>
+</div>
+</div>
+
+<script>
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CONFIGURACIÓN — INTEGRACIÓN SHAREPOINT / AZURE / POWER AUTOMATE   ║
+// ║  Ver guia-integracion.html para instrucciones paso a paso           ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+// ╔══════════════════════════════════════════════════════════════════════╗
+// ║  CONFIGURACIÓN — INTEGRACIÓN SHAREPOINT / AZURE / POWER AUTOMATE   ║
+// ╠══════════════════════════════════════════════════════════════════════╣
+// ║  PASO 1 — Azure Portal (portal.azure.com)                           ║
+// ║    · Entra ID → App registrations → New registration                ║
+// ║    · Redirect URI: Single-page application → URL del formulario     ║
+// ║    · API permissions: User.Read, Sites.ReadWrite.All                ║
+// ║    · Copia el Application (client) ID y el Directory (tenant) ID    ║
+// ║                                                                      ║
+// ║  PASO 2 — Power Automate (make.powerautomate.com)                   ║
+// ║    · Nuevo flujo: "When an HTTP request is received"                ║
+// ║    · Acción 1: SharePoint → "Create item" → lista Levantamientos    ║
+// ║    · Acción 2: Teams → "Post message in a channel"                  ║
+// ║                  Canal: "Diseño" (Administración)                   ║
+// ║                                                                      ║
+// ║  PASO 3 — SharePoint List (Columnas recomendadas)                   ║
+// ║    Title (texto), arquitecto, arquitecto_email, fecha_visita,       ║
+// ║    area_m2, tipo_espacio, exposicion_solar, disponibilidad_agua,    ║
+// ║    humedad, obs_area, elementos_existentes, estado_infraestructura, ║
+// ║    trabajos_previos, desc_trabajos, largo_m, ancho_m, altura_m,     ║
+// ║    notas_geometria, evidencia_fotografica, envio_fotos,             ║
+// ║    fecha_envio_fotos, notas_fotos, estilo_diseno, paleta_colores,   ║
+// ║    ref_positivas, ref_negativas, uso_espacio, obs_generales,        ║
+// ║    revisita, fecha_prediseno, cliente_presente, fecha_registro      ║
+// ║                                                                      ║
+// ║  PASO 4 — Activar aquí                                              ║
+// ║    · Cambia AUTH_ACTIVO a true                                       ║
+// ║    · Pega CLIENT_ID, TENANT_ID y PA_URL                             ║
+// ╚══════════════════════════════════════════════════════════════════════╝
+const CFG = {
+  AUTH_ACTIVO:  true,
+  CLIENT_ID:    "8c79679e-b71c-4947-b75a-8391c898dc64",
+  TENANT_ID:    "83943a6e-e0e7-465f-9eca-0ea320d39ec7",
+  SP_SITE:      "https://netorgft10514386.sharepoint.com/sites/FormulariosGreenStudioRD",
+  SP_LIST:      "GS-GD-F1 Levantamiento de Diseño",
+  PA_URL:       "TU-URL-POWER-AUTOMATE",      // ← make.powerautomate.com (opcional)
+  DOMINIO:      "greenstudiord.com",
+};
+
+let msalInst = null, userAcc = null, datos = {};
+let cur = 0; const TOTAL = 5;
+
+function boot() {
+  const hoy = new Date().toISOString().split('T')[0];
+  document.querySelectorAll('input[type=date]').forEach(d=>{ if(!d.value) d.value=hoy; });
+
+  // Construir escala de humedad
+  const hEl = document.getElementById('humedad');
+  for(let i=1;i<=5;i++){
+    const o=document.createElement('div');
+    o.className='sopt'; o.textContent=i;
+    o.addEventListener('click',()=>{
+      hEl.querySelectorAll('.sopt').forEach(x=>x.classList.remove('sel'));
+      o.classList.add('sel');
+    });
+    hEl.appendChild(o);
+  }
+
+  if (CFG.AUTH_ACTIVO) {
+    document.getElementById('demo-badge').classList.add('hidden');
+    document.getElementById('login-note').textContent=`Solo accesible con cuenta @${CFG.DOMINIO}.`;
+    try {
+      msalInst = new msal.PublicClientApplication({
+        auth:{ clientId:CFG.CLIENT_ID, authority:`https://login.microsoftonline.com/${CFG.TENANT_ID}`, redirectUri:location.href.split('?')[0] }
+      });
+      msalInst.handleRedirectPromise().then(r=>{
+        if(r){ procesarLogin(r); return; }
+        const cuentas = msalInst.getAllAccounts();
+        if(cuentas.length){ procesarLogin({account:cuentas[0]}); return; }
+        document.getElementById('login-overlay').classList.add('vis');
+      }).catch(e=>{ console.warn(e); document.getElementById('login-overlay').classList.add('vis'); });
+    } catch(e){ console.warn(e); document.getElementById('login-overlay').classList.add('vis'); }
+  } else {
+    document.getElementById('formulario-main').style.display='block';
+    actualizarNotaCierre();
+    updateNav();
+  }
+}
+
+async function iniciarLogin() {
+  const btn=document.getElementById('btn-login');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Conectando...';
+  document.getElementById('login-error').style.display='none';
+  try {
+    const r = await msalInst.loginPopup({scopes:['User.Read']});
+    procesarLogin(r);
+  } catch(e) {
+    btn.disabled=false;
+    btn.innerHTML='<svg viewBox="0 0 21 21" fill="none"><rect x="1" y="1" width="9" height="9" fill="#F25022"/><rect x="11" y="1" width="9" height="9" fill="#7FBA00"/><rect x="1" y="11" width="9" height="9" fill="#00A4EF"/><rect x="11" y="11" width="9" height="9" fill="#FFB900"/></svg> Iniciar sesión con Microsoft';
+    const el=document.getElementById('login-error');
+    el.style.display='block';
+    el.textContent=e.errorCode==='user_cancelled'?'Inicio de sesión cancelado.':'Error al conectar. Intenta de nuevo.';
+  }
+}
+
+function procesarLogin(r) {
+  const email=r.account.username, dom=email.split('@')[1];
+  if(dom!==CFG.DOMINIO){
+    const el=document.getElementById('login-error');
+    el.style.display='block'; el.textContent=`Acceso restringido. Solo cuentas @${CFG.DOMINIO}.`;
+    document.getElementById('btn-login').disabled=false;
+    msalInst.logoutPopup({account:r.account}).catch(()=>{});
+    return;
+  }
+  userAcc=r.account;
+  const nombre=r.account.name||email;
+  const ini=nombre.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+  document.getElementById('u-avatar').textContent=ini;
+  document.getElementById('u-name').textContent=nombre;
+  document.getElementById('u-email').textContent=email;
+  document.getElementById('user-bar').classList.add('vis');
+  document.getElementById('demo-badge').classList.add('hidden');
+  const arq=document.getElementById('arquitecto');
+  arq.value=nombre; arq.readOnly=true;
+  document.getElementById('login-overlay').classList.remove('vis');
+  document.getElementById('formulario-main').style.display='block';
+  actualizarNotaCierre();
+  updateNav();
+}
+
+function actualizarNotaCierre() {
+  const paListo=CFG.PA_URL&&CFG.PA_URL.startsWith('https');
+  if(!paListo){
+    const n=document.getElementById('nota-cierre');
+    n.style.borderLeftColor='var(--border)'; n.style.background='var(--leaf-mist)'; n.style.color='var(--ink-soft)';
+    n.textContent='Modo local — los datos se guardarán y podrás descargar Word y PDF. La integración con SharePoint y Teams se activa cuando configures el bloque CFG.';
+  }
+}
+
+function goTo(n){
+  document.querySelectorAll('.section')[cur].classList.remove('visible');
+  document.querySelectorAll('.step')[cur].classList.remove('active');
+  if(cur<n) document.querySelectorAll('.step')[cur].classList.add('done');
+  cur=n;
+  document.querySelectorAll('.section')[cur].classList.add('visible');
+  document.querySelectorAll('.step')[cur].classList.add('active');
+  updateNav(); window.scrollTo({top:0,behavior:'smooth'});
+}
+async function navNext(){ if(cur<TOTAL-1) goTo(cur+1); else await enviar(); }
+function navBack(){ if(cur>0) goTo(cur-1); }
+function updateNav(){
+  document.getElementById('btn-back').style.visibility=cur===0?'hidden':'visible';
+  document.getElementById('btn-next').textContent=cur===TOTAL-1?'Guardar y enviar ✓':'Siguiente →';
+  document.getElementById('step-ctr').textContent=`Paso ${cur+1} de ${TOTAL}`;
+}
+
+function toggleCC(cb){ cb.closest('.cc').classList.toggle('sel-card',cb.checked); }
+function checks(id){ return [...document.getElementById(id).querySelectorAll('input:checked')].map(c=>c.value||c.closest('.cc').querySelector('.cc-text').textContent).join(', '); }
+function v(id){ return document.getElementById(id)?document.getElementById(id).value:''; }
+function humedadVal(){ const s=document.querySelector('#humedad .sopt.sel'); return s?s.textContent:''; }
+
+function recolectar(){
+  return {
+    Title: `Diseño ${v('fecha-visita')} — ${v('arquitecto')||'Sin arquitecto'}`,
+    arquitecto: v('arquitecto'),
+    arquitecto_email: userAcc?userAcc.username:'',
+    fecha_visita: v('fecha-visita'),
+    area_m2: v('area-m2'),
+    tipo_espacio: v('tipo-espacio'),
+    exposicion_solar: checks('exposicion-solar'),
+    disponibilidad_agua: checks('agua'),
+    humedad: humedadVal(),
+    obs_area: v('obs-area'),
+    elementos_existentes: checks('elementos'),
+    estado_infraestructura: v('estado-infra'),
+    trabajos_previos: v('trabajos-previos'),
+    desc_trabajos: v('desc-trabajos'),
+    largo_m: v('largo'),
+    ancho_m: v('ancho'),
+    altura_m: v('altura'),
+    notas_geometria: v('notas-geometria'),
+    evidencia_fotografica: checks('evidencia'),
+    envio_fotos: v('envio-foto'),
+    fecha_envio_fotos: v('fecha-envio-foto'),
+    notas_fotos: v('notas-fotos'),
+    estilo_diseno: checks('estilo-diseno'),
+    paleta_colores: checks('paleta'),
+    ref_positivas: v('ref-positivas'),
+    ref_negativas: v('ref-negativas'),
+    uso_espacio: v('uso-espacio'),
+    obs_generales: v('obs-generales'),
+    revisita: v('revisita'),
+    fecha_prediseno: v('fecha-prediseno'),
+    cliente_presente: v('cliente-presente'),
+    fecha_registro: new Date().toISOString(),
+  };
+}
+
+async function enviar(){
+  const btn=document.getElementById('btn-next');
+  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Guardando...';
+  datos=recolectar();
+  const spListo=CFG.SP_SITE&&CFG.SP_SITE.startsWith('https')&&CFG.SP_LIST;
+  if(spListo&&userAcc&&msalInst){
+    try{
+      const tr=await msalInst.acquireTokenSilent({scopes:['https://graph.microsoft.com/Sites.ReadWrite.All'],account:userAcc});
+      const tok=tr.accessToken;
+      // Obtener site ID
+      const siteHost=new URL(CFG.SP_SITE).hostname;
+      const sitePath=new URL(CFG.SP_SITE).pathname;
+      const siteR=await fetch(`https://graph.microsoft.com/v1.0/sites/${siteHost}:${sitePath}`,{headers:{Authorization:'Bearer '+tok}});
+      if(!siteR.ok) throw new Error('Site HTTP '+siteR.status);
+      const siteData=await siteR.json();
+      const siteId=siteData.id;
+      // Obtener list ID
+      const listsR=await fetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/lists?$filter=displayName eq '${encodeURIComponent(CFG.SP_LIST)}'`,{headers:{Authorization:'Bearer '+tok}});
+      if(!listsR.ok) throw new Error('Lists HTTP '+listsR.status);
+      const listsData=await listsR.json();
+      if(!listsData.value||!listsData.value.length) throw new Error('Lista no encontrada: '+CFG.SP_LIST);
+      const listId=listsData.value[0].id;
+      // Crear item
+      const campos={Title:datos.Title};
+      Object.keys(datos).forEach(k=>{ if(k!=='Title') campos[k]=datos[k]; });
+      const itemR=await fetch(`https://graph.microsoft.com/v1.0/sites/${siteId}/lists/${listId}/items`,{
+        method:'POST',
+        headers:{'Content-Type':'application/json',Authorization:'Bearer '+tok},
+        body:JSON.stringify({fields:campos})
+      });
+      if(!itemR.ok) throw new Error('Item HTTP '+itemR.status);
+      // Notificar a PA si está configurado
+      if(CFG.PA_URL&&CFG.PA_URL.startsWith('https')){
+        fetch(CFG.PA_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(datos)}).catch(()=>{});
+      }
+      mostrarExito(true);
+    }catch(e){
+      btn.disabled=false; btn.textContent='Guardar y enviar ✓';
+      alert('Error al guardar en SharePoint.\n\nVerifica que CLIENT_ID, TENANT_ID y SP_LIST estén correctos y los permisos de la app estén activos.\n\nDetalle: '+e.message);
+    }
+  } else { mostrarExito(false); }
+}
+
+function mostrarExito(conectado){
+  document.querySelectorAll('.section').forEach(s=>s.style.display='none');
+  document.getElementById('nav-bar').style.display='none';
+  document.getElementById('success').style.display='block';
+  document.querySelectorAll('.step')[cur].classList.remove('active');
+  document.querySelectorAll('.step')[cur].classList.add('done');
+  if(conectado){
+    document.getElementById('suc-msg').textContent='Registrado en SharePoint. Teams — Diseño fue notificado.';
+    document.getElementById('suc-steps').innerHTML='<div class="ns-item"><strong>SharePoint</strong>Item creado en la lista</div><div class="ns-item"><strong>Teams</strong>Notificación enviada</div><div class="ns-item"><strong>Word / PDF</strong>Listos para descargar</div>';
+  } else {
+    document.getElementById('suc-msg').textContent='Datos guardados localmente. Descarga Word o PDF para conservar el registro.';
+    document.getElementById('suc-steps').innerHTML='<div class="ns-item"><strong>Local</strong>Datos guardados</div><div class="ns-item"><strong>Word / PDF</strong>Listos para descargar</div>';
+  }
+  setTimeout(()=>descargarWord(),800);
+}
+
+/* ─── WORD ─── */
+async function descargarWord(){
+  const d=datos;
+  if(!d||!Object.keys(d).length){alert('Completa y guarda el formulario primero.');return;}
+  const{Document,Paragraph,TextRun,Table,TableRow,TableCell,WidthType,BorderStyle,AlignmentType,Packer,ShadingType}=docx;
+  const V='4a7c59',GCL='f2f7f3',INK='1c2b1f',SO='6b8870',GRD='c9d9cc';
+  const nb={style:BorderStyle.NONE}, sb={style:BorderStyle.SINGLE,size:2,color:GRD};
+  const fila=(l,val)=>new TableRow({children:[
+    new TableCell({width:{size:36,type:WidthType.PERCENTAGE},shading:{fill:GCL,type:ShadingType.CLEAR},borders:{top:nb,bottom:sb,left:nb,right:nb},children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:l,size:18,color:SO,font:'Calibri'})]})]}),
+    new TableCell({width:{size:64,type:WidthType.PERCENTAGE},borders:{top:nb,bottom:sb,left:nb,right:nb},children:[new Paragraph({spacing:{before:60,after:60},children:[new TextRun({text:val||'—',size:18,color:INK,font:'Calibri'})]})]})
+  ]});
+  const sh=(t)=>new Paragraph({spacing:{before:280,after:60},shading:{fill:V,type:ShadingType.CLEAR},indent:{left:120,right:120},children:[new TextRun({text:t,size:19,bold:true,color:'FFFFFF',font:'Calibri'})]});
+  const tb=(rows)=>new Table({width:{size:100,type:WidthType.PERCENTAGE},rows});
+
+  const doc2=new Document({sections:[{
+    properties:{page:{margin:{top:720,right:720,bottom:900,left:720}}},
+    children:[
+      new Paragraph({spacing:{after:0},children:[new TextRun({text:'GREEN STUDIO RD',size:40,bold:true,color:V,font:'Calibri'})]}),
+      new Paragraph({spacing:{after:40},children:[new TextRun({text:'Diseño biofílico · Paisajismo sostenible',size:18,color:SO,font:'Calibri'})]}),
+      new Paragraph({spacing:{after:20},border:{bottom:{style:BorderStyle.SINGLE,size:6,color:V}},children:[new TextRun({text:'GS-GD-F1  ·  LEVANTAMIENTO DE DISEÑO',size:26,bold:true,color:INK,font:'Calibri'})]}),
+      new Paragraph({spacing:{before:80,after:300},children:[new TextRun({text:`Fecha: ${d.fecha_visita||'—'}   ·   Arquitecto: ${d.arquitecto||'—'}`,size:17,color:SO,font:'Calibri'})]}),
+      sh('1.  CONDICIONES DEL ÁREA'),
+      tb([fila('Área (m²)',d.area_m2),fila('Tipo de espacio',d.tipo_espacio),fila('Exposición solar',d.exposicion_solar),fila('Disponibilidad de agua',d.disponibilidad_agua),fila('Humedad (1–5)',d.humedad),fila('Observaciones del área',d.obs_area)]),
+      sh('2.  INFRAESTRUCTURA EXISTENTE'),
+      tb([fila('Elementos presentes',d.elementos_existentes),fila('Estado general',d.estado_infraestructura),fila('Trabajos previos',d.trabajos_previos),fila('Descripción de trabajos',d.desc_trabajos)]),
+      sh('3.  MEDIDAS Y FOTOGRAFÍAS'),
+      tb([fila('Largo (m)',d.largo_m),fila('Ancho (m)',d.ancho_m),fila('Altura libre (m)',d.altura_m),fila('Notas de geometría',d.notas_geometria),fila('Evidencia fotográfica',d.evidencia_fotografica),fila('Forma de envío',d.envio_fotos),fila('Fecha de envío',d.fecha_envio_fotos),fila('Notas de fotografías',d.notas_fotos)]),
+      sh('4.  PREFERENCIAS ESTÉTICAS'),
+      tb([fila('Estilo de diseño',d.estilo_diseno),fila('Paleta de colores',d.paleta_colores),fila('Referencias positivas',d.ref_positivas),fila('No desea incluir',d.ref_negativas),fila('Uso esperado del espacio',d.uso_espacio)]),
+      sh('5.  OBSERVACIONES Y CIERRE'),
+      tb([fila('Observaciones generales',d.obs_generales),fila('¿Requiere revisita?',d.revisita),fila('Fecha pre-diseño estimada',d.fecha_prediseno),fila('Cliente / representante presente',d.cliente_presente)]),
+      new Paragraph({spacing:{before:360},border:{top:{style:BorderStyle.SINGLE,size:2,color:GRD}},alignment:AlignmentType.RIGHT,children:[new TextRun({text:`Registrado por: ${d.arquitecto}${d.arquitecto_email?' ('+d.arquitecto_email+')':''}   ·   ${new Date().toLocaleString('es-DO')}`,size:16,color:'aaaaaa',font:'Calibri'})]}),
+      new Paragraph({alignment:AlignmentType.RIGHT,children:[new TextRun({text:'GS-GD-F1 · Versión 1 · 2025 · Uso interno — Green Studio RD',size:16,color:'aaaaaa',font:'Calibri'})]})
+    ]
+  }]});
+  const blob=await Packer.toBlob(doc2);
+  const fecha=(d.fecha_visita||new Date().toISOString().split('T')[0]);
+  const arq=(d.arquitecto||'arquitecto').replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'-').slice(0,20);
+  saveAs(blob,`GS-GD-F1_${fecha}_${arq}.docx`);
+}
+
+/* ─── PDF (print) ─── */
+function descargarPDF(){
+  const d=datos;
+  if(!d||!Object.keys(d).length){alert('Completa y guarda el formulario primero.');return;}
+
+  const filas=(pares)=>pares.map(([l,v])=>`
+    <tr>
+      <td style="width:36%;background:#f2f7f3;padding:7px 10px;font-size:11px;color:#6b8870;border-bottom:1px solid #c9d9cc;">${l}</td>
+      <td style="width:64%;padding:7px 10px;font-size:11px;color:#1c2b1f;border-bottom:1px solid #c9d9cc;">${v||'—'}</td>
+    </tr>`).join('');
+
+  const seccion=(titulo,rows)=>`
+    <div style="margin-bottom:4px;">
+      <div style="background:#4a7c59;padding:8px 14px;margin-top:20px;">
+        <span style="font-size:11px;font-weight:bold;color:white;letter-spacing:.5px;">${titulo}</span>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">${filas(rows)}</table>
+    </div>`;
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <style>
+    @page{margin:18mm 15mm;}
+    body{font-family:Calibri,Arial,sans-serif;color:#1c2b1f;font-size:11px;margin:0;}
+    .hdr{border-bottom:3px solid #4a7c59;padding-bottom:10px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:flex-end;}
+    .brand{font-size:20px;font-weight:bold;color:#4a7c59;letter-spacing:-.5px;}
+    .brand span{display:block;font-size:10px;font-weight:normal;color:#6b8870;letter-spacing:1.5px;text-transform:uppercase;margin-top:2px;}
+    .meta{text-align:right;font-size:10px;color:#6b8870;}
+    .meta strong{display:block;font-size:12px;color:#1c2b1f;}
+    .sub{font-size:10px;color:#6b8870;margin-bottom:14px;}
+    .footer{margin-top:20px;padding-top:8px;border-top:1px solid #c9d9cc;display:flex;justify-content:space-between;font-size:9px;color:#aaa;}
+    @media print{button{display:none!important;}}
+  </style></head><body>
+  <div class="hdr">
+    <div><div class="brand">GREEN STUDIO RD<span>Diseño biofílico · Paisajismo sostenible</span></div></div>
+    <div class="meta"><strong>GS-GD-F1 · LEVANTAMIENTO DE DISEÑO</strong>Fecha: ${d.fecha_visita||'—'} · Arquitecto: ${d.arquitecto||'—'}</div>
+  </div>
+  ${seccion('1.  CONDICIONES DEL ÁREA',[
+    ['Área (m²)',d.area_m2],['Tipo de espacio',d.tipo_espacio],['Exposición solar',d.exposicion_solar],
+    ['Disponibilidad de agua',d.disponibilidad_agua],['Humedad (1–5)',d.humedad],['Observaciones del área',d.obs_area]
+  ])}
+  ${seccion('2.  INFRAESTRUCTURA EXISTENTE',[
+    ['Elementos presentes',d.elementos_existentes],['Estado general',d.estado_infraestructura],
+    ['Trabajos previos',d.trabajos_previos],['Descripción de trabajos',d.desc_trabajos]
+  ])}
+  ${seccion('3.  MEDIDAS Y FOTOGRAFÍAS',[
+    ['Largo (m)',d.largo_m],['Ancho (m)',d.ancho_m],['Altura libre (m)',d.altura_m],
+    ['Notas de geometría',d.notas_geometria],['Evidencia fotográfica',d.evidencia_fotografica],
+    ['Forma de envío',d.envio_fotos],['Fecha de envío',d.fecha_envio_fotos],['Notas de fotografías',d.notas_fotos]
+  ])}
+  ${seccion('4.  PREFERENCIAS ESTÉTICAS',[
+    ['Estilo de diseño',d.estilo_diseno],['Paleta de colores',d.paleta_colores],
+    ['Referencias positivas',d.ref_positivas],['No desea incluir',d.ref_negativas],['Uso esperado del espacio',d.uso_espacio]
+  ])}
+  ${seccion('5.  OBSERVACIONES Y CIERRE',[
+    ['Observaciones generales',d.obs_generales],['¿Requiere revisita?',d.revisita],
+    ['Fecha pre-diseño estimada',d.fecha_prediseno],['Cliente presente',d.cliente_presente]
+  ])}
+  <div class="footer">
+    <span>GS-GD-F1 · Versión 1 · 2025 · Uso interno — Green Studio RD</span>
+    <span>Registrado por: ${d.arquitecto||'—'}${d.arquitecto_email?' ('+d.arquitecto_email+')':''} · ${new Date().toLocaleString('es-DO')}</span>
+  </div>
+  <script>window.onload=()=>{window.print();}<\/script>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+}
+
+function waitForMSAL(fn, n) {
+  n = n || 0;
+  if (typeof msal !== 'undefined') { fn(); }
+  else if (n < 60) { setTimeout(function(){ waitForMSAL(fn, n+1); }, 100); }
+  else { document.getElementById('formulario-main').style.display='block'; updateNav(); }
+}
+waitForMSAL(boot);
+</script>
+</body>
+</html>

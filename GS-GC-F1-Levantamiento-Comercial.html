@@ -496,7 +496,7 @@ const CFG = {
   CLIENT_ID:    "182073dd-0a36-4152-b7e2-5ccf04621b79",
   TENANT_ID:    "83943a6e-e0e7-465f-9eca-0ea320d39ec7",
   SP_SITE:      "https://netorgft10514386.sharepoint.com/sites/FormulariosGreenStudioRD",
-  SP_LIST:      "GS-GC-F1 Levantamiento Comercial",
+  SP_LIST:      "GSGCF1 Levantamiento Comercial",
   DOMINIO:      "greenstudiord.com",
 };
 // ═══════════════════════════════════════════════════════════════════════
@@ -732,48 +732,53 @@ async function enviar(){
       }
 
       // 2. Preparar el item para SharePoint
-      // Mapeo de campos del formulario a columnas de SharePoint
+      // Helpers para tipos de columna
+      const toDate = v => v ? new Date(v).toISOString() : null;
+      const toNum  = v => (v && v !== '') ? parseFloat(v) : null;
+
       const spItem={
         Title:                datos.Title||datos.cliente_nombre||'Sin nombre',
-        encargado:            datos.encargado,
-        encargado_email:      datos.encargado_email,
-        fecha_levantamiento:  datos.fecha_levantamiento,
-        cliente_nombre:       datos.cliente_nombre,
-        cliente_rnc:          datos.cliente_rnc,
-        cliente_telefono:     datos.cliente_telefono,
-        cliente_whatsapp:     datos.cliente_whatsapp,
-        cliente_email:        datos.cliente_email,
-        como_conocio:         datos.como_conocio,
-        referido:             datos.referido,
-        tipo_cliente:         datos.tipo_cliente,
-        direccion:            datos.direccion,
-        sector:               datos.sector,
-        nombre_proyecto:      datos.nombre_proyecto,
-        lineas_servicio:      datos.lineas_servicio,
-        alcance:              datos.alcance,
-        area_m2:              datos.area_m2,
-        tipo_espacio:         datos.tipo_espacio,
-        estilo_diseno:        datos.estilo_diseno,
-        uso_espacio:          datos.uso_espacio,
-        referencias_positivas:datos.referencias_positivas,
-        referencias_negativas:datos.referencias_negativas,
-        componentes_diseno:   datos.componentes_diseno,
-        vegetacion_existente: datos.vegetacion_existente,
-        observaciones:        datos.observaciones,
-        presupuesto:          datos.presupuesto,
-        urgencia:             datos.urgencia,
-        condicion_pago:       datos.condicion_pago,
-        competencia:          datos.competencia,
-        fecha_visita:         datos.fecha_visita,
-        temperatura:          datos.temperatura,
-        notas_ventas:         datos.notas_ventas,
-        estado_prospecto:     datos.estado_prospecto,
-        proxima_accion:       datos.proxima_accion,
-        fecha_seguimiento:    datos.fecha_seguimiento,
-        notif_diseno:         datos.notif_diseno,
-        confirmacion_cliente: datos.confirmacion_cliente,
-        fecha_registro:       datos.fecha_registro
+        encargado:            datos.encargado||'',
+        encargado_email:      datos.encargado_email||'',
+        fecha_levantamiento:  toDate(datos.fecha_levantamiento),
+        cliente_nombre:       datos.cliente_nombre||'',
+        cliente_rnc:          datos.cliente_rnc||'',
+        cliente_telefono:     datos.cliente_telefono||'',
+        cliente_whatsapp:     datos.cliente_whatsapp||'',
+        cliente_email:        datos.cliente_email||'',
+        como_conocio:         datos.como_conocio||'',
+        referido:             datos.referido||'',
+        tipo_cliente:         datos.tipo_cliente||'',
+        direccion:            datos.direccion||'',
+        sector:               datos.sector||'',
+        nombre_proyecto:      datos.nombre_proyecto||'',
+        lineas_servicio:      datos.lineas_servicio||'',
+        alcance:              datos.alcance||'',
+        area_m2:              toNum(datos.area_m2),
+        tipo_espacio:         datos.tipo_espacio||'',
+        estilo_diseno:        datos.estilo_diseno||'',
+        uso_espacio:          datos.uso_espacio||'',
+        referencias_positivas:datos.referencias_positivas||'',
+        referencias_negativas:datos.referencias_negativas||'',
+        componentes_diseno:   datos.componentes_diseno||'',
+        vegetacion_existente: datos.vegetacion_existente||'',
+        observaciones:        datos.observaciones||'',
+        presupuesto:          datos.presupuesto||'',
+        urgencia:             datos.urgencia||'',
+        condicion_pago:       datos.condicion_pago||'',
+        competencia:          datos.competencia||'',
+        fecha_visitatecnica:  toDate(datos.fecha_visita),
+        temperatura:          datos.temperatura||'',
+        notas_ventas:         datos.notas_ventas||'',
+        estado_prospecto:     datos.estado_prospecto||'',
+        proxima_accion:       datos.proxima_accion||'',
+        fecha_seguimiento:    toDate(datos.fecha_seguimiento),
+        notif_diseno:         datos.notif_diseno||'',
+        confirmacion_cliente: datos.confirmacion_cliente||'',
+        fecha_registro:       toDate(datos.fecha_registro)
       };
+      // Eliminar nulls para no causar errores en SharePoint
+      Object.keys(spItem).forEach(k => { if(spItem[k]===null) delete spItem[k]; });
 
       // 3. Enviar a SharePoint API REST
       btn.innerHTML='<span class="spinner"></span> Guardando en SharePoint...';

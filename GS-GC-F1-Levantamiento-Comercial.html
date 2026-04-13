@@ -718,14 +718,14 @@ async function enviar(){
       let token='';
       try{
         const tr=await msalInst.acquireTokenSilent({
-          scopes:[CFG.SP_SITE+'/.default'],
+          scopes:['https://netorgft10514386.sharepoint.com/AllSites.Write'],
           account:userAcc
         });
         token=tr.accessToken;
       }catch(e){
         // Si falla silent, intentar popup
         const tr=await msalInst.acquireTokenPopup({
-          scopes:[CFG.SP_SITE+'/.default'],
+          scopes:['https://netorgft10514386.sharepoint.com/AllSites.Write'],
           account:userAcc
         });
         token=tr.accessToken;

@@ -586,31 +586,54 @@ async function obtenerTokenSP() {
 }
 
 // ── GUARDAR EN SHAREPOINT (API REST directa) ──
+async function obtenerListType(spToken) {
+  // Consulta el ListItemEntityTypeFullName real de la lista
+  const url = `${CFG.SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(CFG.SP_LIST)}')?$select=ListItemEntityTypeFullName`;
+  const r = await fetch(url, {
+    headers: {
+      'Authorization': 'Bearer ' + spToken,
+      'Accept': 'application/json;odata=nometadata'
+    }
+  });
+  if(!r.ok) return null;
+  const j = await r.json();
+  return j.ListItemEntityTypeFullName || null;
+}
+
 async function guardarEnSharePoint(d, spToken) {
   if(!CFG.SP_SITE || !CFG.SP_LIST || !spToken) return false;
+
+  // Obtener el type real de la lista antes de crear el ítem
+  const listType = await obtenerListType(spToken);
+  if(!listType) { console.warn('SP: no se pudo obtener ListItemEntityTypeFullName'); return false; }
+
   const endpoint = `${CFG.SP_SITE}/_api/web/lists/getbytitle('${encodeURIComponent(CFG.SP_LIST)}')/items`;
+  // fecha_solicitud y fecha_registro deben ser columnas de texto en SP
+  // Si son tipo "Fecha y hora" en SP, hay que enviarlas en formato ISO con timezone
+  const fechaSol = d.fecha_solicitud ? d.fecha_solicitud + 'T00:00:00Z' : null;
+  const fechaReg = d.fecha_registro || new Date().toISOString();
+
   const body = {
-    '__metadata': { 'type': 'SP.Data.GS_x002d_GA_x002d_F1_x0020_Solicitud_x0020_de_x0020_PedidosListItem' },
-    Title:            d.Title || `Pedido ${d.fecha_solicitud} — ${d.proyecto||'Sin proyecto'}`,
+    '__metadata': { 'type': listType },
+    Title:            d.Title || ('Pedido ' + (d.fecha_solicitud||'') + ' — ' + (d.proyecto||'Sin proyecto')),
     solicitado_por:   d.solicitado_por || '',
     solicitado_email: d.solicitado_email || '',
     recibido_por:     d.recibido_por || '',
     proyecto:         d.proyecto || '',
-    fecha_solicitud:  d.fecha_solicitud || '',
+    fecha_solicitud:  fechaSol,
     urgencia:         d.urgencia || '',
     total_items:      d.total_items || 0,
     detalle_items:    (d.detalle_items || '').slice(0, 4000),
     items_json:       (d.items_json || '').slice(0, 4000),
     observaciones:    (d.observaciones || '').slice(0, 4000),
-    fecha_registro:   d.fecha_registro || new Date().toISOString(),
+    fecha_registro:   fechaReg,
   };
   const resp = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Authorization': 'Bearer ' + spToken,
-      'Accept': 'application/json;odata=nometadata',
+      'Accept': 'application/json;odata=verbose',
       'Content-Type': 'application/json;odata=verbose',
-      'X-RequestDigest': ''  // no es necesario con Bearer en REST v1
     },
     body: JSON.stringify(body)
   });
@@ -645,7 +668,11 @@ async function guardar() {
       btn.innerHTML = '<span class="spinner"></span> Registrando en SharePoint...';
       const spToken = await obtenerTokenSP();
       if(spToken) {
+        console.log('SP token OK, guardando ítem...');
         spOk = await guardarEnSharePoint(datos, spToken);
+        console.log('SP result:', spOk);
+      } else {
+        console.warn('No se obtuvo token SP — verifica permisos Sites.ReadWrite.All en Azure');
       }
     }
 

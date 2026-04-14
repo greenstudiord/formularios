@@ -599,35 +599,40 @@ async function generarPDFBase64(d){
 }
 
 // ── GUARDAR ──
-async function guardar(){
-  const btn=document.getElementById('btn-guardar');
-  btn.disabled=true; btn.innerHTML='<span class="spinner"></span> Guardando...';
-  datos=recolectar();
-  const paListo=CFG.PA_URL&&CFG.PA_URL.startsWith('https');
-  if(paListo){
-    try{
-      btn.innerHTML='<span class="spinner"></span> Generando PDF...';
-      const proy=(datos.proyecto||'conduce').replace(/[^a-zA-Z0-9\s]/g,'').replace(/\s+/g,'-').slice(0,24);
-      const fecha=datos.fecha||new Date().toISOString().split('T')[0];
-      const pdfFilename=`GS-GO-F2_${fecha}_${proy}.pdf`;
-      const pdfBase64=await generarPDFBase64(datos);
-      btn.innerHTML='<span class="spinner"></span> Enviando a Teams...';
-      let tok='';
-      if(userAcc&&msalInst){try{const tr=await msalInst.acquireTokenSilent({scopes:['User.Read'],account:userAcc});tok=tr.accessToken;}catch(e){}}
-      const r=await fetch(CFG.PA_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json',...(tok?{'Authorization':'Bearer '+tok}:{})},
-        body:JSON.stringify({...datos,pdf_base64:pdfBase64,pdf_filename:pdfFilename})
-      });
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      mostrarExito(true);
-    }catch(e){
-      btn.disabled=false; btn.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Guardar conduce';
-      alert('Error al enviar.\n\nVerifica PA_URL y que el flujo esté activo.\n\nDetalle: '+e.message);
-    }
-  }else{mostrarExito(false);}
-}
+async function guardarEnSP(datos){
+  const tr = await msalInst.acquireTokenSilent({
+    scopes: ["https://graph.microsoft.com/.default"],
+    account: userAcc
+  });
 
+  const token = tr.accessToken;
+
+  await fetch("https://netorgft10514386.sharepoint.com/sites/FormulariosGreenStudioRD/_api/web/lists/getbytitle('GS-GO-F2 Conduces de salida')/items", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/json;odata=verbose",
+      "Content-Type": "application/json;odata=verbose"
+    },
+    body: JSON.stringify({
+      Title: datos.proyecto,
+      responsable: datos.responsable,
+      responsable_email: datos.responsable_email,
+      fecha: datos.fecha,
+      proyecto: datos.proyecto,
+      ubicacion: datos.ubicacion,
+      origen: datos.origen,
+      entregado_por: datos.entregado_por,
+      recibido_por: datos.recibido_por,
+      fecha_entrega: datos.fecha_entrega,
+      total_items: datos.total_items,
+      detalle_items: datos.detalle_items,
+      items_lista: JSON.stringify(datos.items_lista),
+      observaciones: datos.observaciones,
+      fecha_registro: new Date().toISOString()
+    })
+  });
+}
 function mostrarExito(conectado){
   document.getElementById('form-content').style.display='none';
   const banner=document.getElementById('success-banner');
